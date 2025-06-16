@@ -16,30 +16,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import pandas as pd
 
-import argparse
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import mlflow
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, default="spam_ham_emails_preprocessing")
-args = parser.parse_args()
-
-X = pd.read_csv(f"{args.data_path}/tfidf.csv")
-y = pd.read_csv(f"{args.data_path}/labels.csv")["label"]
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-with mlflow.start_run():
-    model = LogisticRegression(max_iter=200)
-    model.fit(X_train, y_train)
-    acc = accuracy_score(y_test, model.predict(X_test))
-    mlflow.log_metric("accuracy", acc)
-    mlflow.sklearn.log_model(model, "model")
-
-
 X = pd.read_csv("MLProjects/spam_ham_emails_preprocessing/tfidf.csv")
 y = pd.read_csv("MLProjects/spam_ham_emails_preprocessing/labels.csv")["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
