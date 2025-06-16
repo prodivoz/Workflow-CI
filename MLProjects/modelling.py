@@ -24,8 +24,8 @@ dagshub.init(repo_owner='ghifari.fikri.yulistia', repo_name='SMSML_Ghifari-Fikri
 mlflow.set_experiment("Modelling Eksperimen")
 mlflow.sklearn.autolog()
 
-X = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/tfidf.csv")
-y = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/labels.csv")["label"]
+X = pd.read_csv("MLProjects/spam_ham_emails_preprocessing/tfidf.csv")
+y = pd.read_csv("MLProjects/spam_ham_emails_preprocessing/labels.csv")["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 with mlflow.start_run():
