@@ -19,7 +19,7 @@ import pandas as pd
 os.environ["MLFLOW_TRACKING_USERNAME"] = "ghifari.fikri.yulistia"
 os.environ["MLFLOW_TRACKING_PASSWORD"] = "28a2bed8301cd660e33707a009cb925162d47426"
 
-dagshub.init(repo_owner='ghifari.fikri.yulistia', repo_name='SMSML_Ghifari-Fikri-Yulistia', mlflow=True)
+dagshub.init(repo_owner='ghifari.fikri.yulistia', repo_name='Workflow-CI', mlflow=True)
 
 mlflow.set_experiment("Modelling Eksperimen")
 mlflow.sklearn.autolog()
