@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1vnsIBbDfW-8liW1WnLIoiz2hzgMnW46s
 """
 
-import os
 import mlflow
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
