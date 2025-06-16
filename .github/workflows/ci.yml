@@ -20,27 +20,27 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        pip install -r MLProjects/requirements.txt
+        pip install -r MLProject/requirements.txt
 
     - name: Run MLflow Project
       run: |
-        cd MLProjects
+        cd MLProject
         mlflow run . --env-manager=local
 
     - name: Save model artifact to GitHub repository
       run: |
         mkdir -p artifacts
-        cp MLProject/model.pkl artifacts/
+        cp MLProject/best_model.pkl artifacts/
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action"
         git pull origin main
-        git add artifacts/model.pkl
+        git add artifacts/best_model.pkl
         git commit -m "📦 Add latest model artifact"
         git push origin main
 
     - name: Build Docker Image
       run: |
-        cd MLProjects
+        cd MLProject
         mlflow build-docker -n spam-classifier-image
 
     - name: Push Docker Image to Docker Hub
