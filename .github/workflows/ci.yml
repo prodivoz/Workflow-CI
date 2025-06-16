@@ -21,7 +21,6 @@ jobs:
     - name: Install Dependencies
       run: |
         pip install -r MLProjects/requirements.txt
-        pip install mlflow==2.19.0
 
     - name: Run MLflow Project
       run: |
@@ -41,7 +40,7 @@ jobs:
 
     - name: Build Docker Image
       run: |
-        cd MLProject
+        cd MLProjects
         mlflow build-docker -n spam-classifier-image
 
     - name: Push Docker Image to Docker Hub
