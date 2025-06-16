@@ -16,19 +16,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import pandas as pd
 
-# Set token dan username DagsHub
 os.environ["MLFLOW_TRACKING_USERNAME"] = "ghifari.fikri.yulistia"
-os.environ["MLFLOW_TRACKING_PASSWORD"] = "TOKEN_DISINI"
+os.environ["MLFLOW_TRACKING_PASSWORD"] = "28a2bed8301cd660e33707a009cb925162d47426"
 
-# Inisialisasi ke DagsHub
 dagshub.init(repo_owner='ghifari.fikri.yulistia', repo_name='SMSML_Ghifari-Fikri-Yulistia', mlflow=True)
 
-# Logging dan training
 mlflow.set_experiment("Modelling Eksperimen")
 mlflow.sklearn.autolog()
 
-X = pd.read_csv("tfidf.csv")
-y = pd.read_csv("labels.csv")["label"]
+X = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/tfidf.csv")
+y = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/labels.csv")["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 with mlflow.start_run():
