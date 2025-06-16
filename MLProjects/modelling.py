@@ -8,9 +8,7 @@ Original file is located at
 """
 
 import os
-from dagshub import dagshub_logger
 import mlflow
-import mlflow.sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
