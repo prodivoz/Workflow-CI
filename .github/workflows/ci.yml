@@ -25,7 +25,7 @@ jobs:
 
     - name: Run MLflow Project
       run: |
-        cd MLProject
+        cd MLProjects
         mlflow run . --env-manager=local
 
     - name: Save model artifact to GitHub repository
