@@ -26,3 +26,14 @@ jobs:
       run: |
         cd MLProject
         mlflow run . --env-manager=local --experiment-name "Modelling Eksperimen"
+        
+    - name: Save artifacts to repository
+      run: |
+        mkdir -p artifacts
+        cp MLProject/*.pkl artifacts/ || true  # agar tidak gagal jika belum ada .pkl
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git pull origin main
+        git add artifacts/
+        git commit -m "Add model artifacts [CI]"
+        git push origin main
