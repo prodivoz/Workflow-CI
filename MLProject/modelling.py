@@ -13,8 +13,8 @@ mlflow.set_tracking_uri("https://dagshub.com/ItsNudle/Workflow-CI.mlflow")
 mlflow.set_experiment("Model ML Eskperimen")
 mlflow.sklearn.autolog()
 
-X = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/tfidf.csv")
-y = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/labels.csv")["label"]
+X = pd.read_csv("spam_ham_emails_preprocessing/tfidf.csv")
+y = pd.read_csv("spam_ham_emails_preprocessing/labels.csv")["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 with mlflow.start_run():
