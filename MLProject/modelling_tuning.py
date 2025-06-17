@@ -13,7 +13,7 @@ os.environ["MLFLOW_TRACKING_USERNAME"] = "ItsNudle"
 os.environ["MLFLOW_TRACKING_PASSWORD"] = "11fccfc93b9df7f77b755ca1718edbec8f34442e"
 
 mlflow.set_tracking_uri("https://dagshub.com/ItsNudle/Workflow-CI.mlflow")
-mlflow.set_experiment("Modelling dan Tuning Eksperimen")
+mlflow.set_experiment("Model ML Workflow CI Eskperimen")
 
 X = pd.read_csv("spam_ham_emails_preprocessing/tfidf.csv")
 y = pd.read_csv("spam_ham_emails_preprocessing/labels.csv")["label"]
