@@ -12,7 +12,7 @@ from mlflow.models.signature import infer_signature
 os.environ["MLFLOW_TRACKING_USERNAME"] = "ItsNudle"
 os.environ["MLFLOW_TRACKING_PASSWORD"] = "11fccfc93b9df7f77b755ca1718edbec8f34442e"
 
-mlflow.set_tracking_uri("https://dagshub.com/ItsNudle/SMSML_Ghifari-Fikri-Yulistia.mlflow")
+mlflow.set_tracking_uri("https://dagshub.com/ItsNudle/Workflow-CI.mlflow")
 mlflow.set_experiment("Modelling dan Tuning Eksperimen")
 
 X = pd.read_csv("MLProject/spam_ham_emails_preprocessing/tfidf.csv")
