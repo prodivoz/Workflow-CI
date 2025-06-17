@@ -10,37 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.12.7
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12.7'
+
+    - name: Install dependencies
+      run: |
+        pip install -r MLProject/requirements.txt
 
     - name: Run MLflow Project
       run: |
         cd MLProject
         mlflow run . --env-manager=local
-
-    - name: Save model artifact to GitHub repository
-      run: |
-        mkdir -p artifacts
-        cp MLProject/best_model.pkl artifacts/
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
-        git pull origin main
-        git add artifacts/best_model.pkl
-        git commit -m "📦 Add latest model artifact"
-        git push origin main
-
-    - name: Build Docker Image
-      run: |
-        cd MLProject
-        mlflow build-docker -n spam-classifier-image
-
-    - name: Push Docker Image to Docker Hub
-      run: |
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-        docker tag spam-classifier-image ${{ secrets.DOCKER_USERNAME }}/spam-classifier-image:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/spam-classifier-image:latest
