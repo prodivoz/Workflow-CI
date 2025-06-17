@@ -5,8 +5,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
-mlflow.set_experiment("Modelling Eksperimen")
+os.environ["MLFLOW_TRACKING_USERNAME"] = "ItsNudle"
+os.environ["MLFLOW_TRACKING_PASSWORD"] = "11fccfc93b9df7f77b755ca1718edbec8f34442e"
+
+mlflow.set_tracking_uri("https://dagshub.com/ItsNudle/Workflow-CI.mlflow")
+mlflow.set_experiment("Model ML Eskperimen")
 mlflow.sklearn.autolog()
 
 X = pd.read_csv("Membangun_Model/spam_ham_emails_preprocessing/tfidf.csv")
