@@ -18,10 +18,6 @@ jobs:
       with:
         python-version: '3.12.7'
 
-    - name: Install Dependencies
-      run: |
-        pip install -r MLProject/requirements.txt
-
     - name: Run MLflow Project
       run: |
         cd MLProject
