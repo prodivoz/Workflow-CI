@@ -10,10 +10,14 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from scipy.stats import uniform
 from mlflow.models.signature import infer_signature
 
-os.environ["MLFLOW_TRACKING_USERNAME"] = "ItsNudle"
-os.environ["MLFLOW_TRACKING_PASSWORD"] = "c4d8e0f875d1f13057a333cd3236c3939b0ab71e"
+dagshub.init(
+    repo_owner='ItsNudle',
+    repo_name='SMSML_Ghifari-Fikri-Yulistia',
+    mlflow=True,
+    branch='main',
+    token='c4d8e0f875d1f13057a333cd3236c3939b0ab71e',
+)
 
-dagshub.init(repo_owner='ItsNudle', repo_name='SMSML_Ghifari-Fikri-Yulistia', mlflow=True)
 mlflow.set_experiment("Modelling dan Tuning Eksperimen")
 
 X = pd.read_csv("MLProject/spam_ham_emails_preprocessing/tfidf.csv")
