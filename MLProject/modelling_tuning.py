@@ -14,7 +14,6 @@ dagshub.init(
     repo_owner='ItsNudle',
     repo_name='SMSML_Ghifari-Fikri-Yulistia',
     mlflow=True,
-    branch='main',
     token='c4d8e0f875d1f13057a333cd3236c3939b0ab71e',
 )
 
