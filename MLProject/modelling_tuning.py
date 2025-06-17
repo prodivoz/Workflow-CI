@@ -15,8 +15,8 @@ os.environ["MLFLOW_TRACKING_PASSWORD"] = "11fccfc93b9df7f77b755ca1718edbec8f3444
 mlflow.set_tracking_uri("https://dagshub.com/ItsNudle/Workflow-CI.mlflow")
 mlflow.set_experiment("Modelling dan Tuning Eksperimen")
 
-X = pd.read_csv("MLProject/spam_ham_emails_preprocessing/tfidf.csv")
-y = pd.read_csv("MLProject/spam_ham_emails_preprocessing/labels.csv")["label"]
+X = pd.read_csv("spam_ham_emails_preprocessing/tfidf.csv")
+y = pd.read_csv("spam_ham_emails_preprocessing/labels.csv")["label"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
