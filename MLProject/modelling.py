@@ -18,8 +18,8 @@ import pandas as pd
 mlflow.set_experiment("Modelling Eksperimen")
 mlflow.sklearn.autolog()
 
-X = pd.read_csv("MLProjects/spam_ham_emails_preprocessing/tfidf.csv")
-y = pd.read_csv("MLProjects/spam_ham_emails_preprocessing/labels.csv")["label"]
+X = pd.read_csv("MLProject/spam_ham_emails_preprocessing/tfidf.csv")
+y = pd.read_csv("MLProject/spam_ham_emails_preprocessing/labels.csv")["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 with mlflow.start_run():
