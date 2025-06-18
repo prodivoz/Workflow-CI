@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  train-model:
+  train-and-dockerize:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,14 +30,26 @@ jobs:
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
 
-    - name: Upload Confusion Matrix
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: confusion-matrix
-        path: MLProject/figures/confusion_matrix_rf.png
+        name: model-artifacts
+        path: |
+          MLProject/models/random_forest_model.pkl
+          MLProject/figures/confusion_matrix_rf.png
 
-    - name: Upload MLflow Artifacts
-      uses: actions/upload-artifact@v4
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
       with:
-        name: mlflow-artifacts
-        path: MLProject/mlruns
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build Docker Image with MLflow
+      run: |
+        cd MLProject
+        mlflow models build-docker -m "mlruns/0/<RUN_ID>/artifacts/model_docker" -n model-mlflow
+
+    - name: Push Docker Image to DockerHub
+      run: |
+        docker tag model-mlflow ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
