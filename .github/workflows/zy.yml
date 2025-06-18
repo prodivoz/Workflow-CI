@@ -2,7 +2,7 @@ name: MLflow CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -44,16 +44,12 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build Docker Image with MLflow
+    - name: Build Docker Image from Latest MLflow Run
       run: |
         cd MLProject
-        mlflow models build-docker -m "mlruns/0/<RUN_ID>/artifacts/model_docker" -n model-mlflow
+        python build_docker.py
 
     - name: Push Docker Image to DockerHub
       run: |
         docker tag model-mlflow ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
-        - name: Build Docker Image from Latest Run
-          run: |
-        cd MLProject
-        python build_docker.py
