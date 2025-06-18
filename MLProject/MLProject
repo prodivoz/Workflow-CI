@@ -1,7 +1,4 @@
-name: best selling games-classifier
-
-conda_env: conda.yaml
-
+name: model_mlflow
 entry_points:
   main:
     parameters: {}
