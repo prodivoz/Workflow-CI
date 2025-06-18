@@ -1,4 +1,4 @@
-name: MLflow CI
+name: MLflow CI & Docker Push
 
 on:
   push:
@@ -6,31 +6,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  train-and-dockerize:
+  train-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: 📦 Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: 🐍 Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
 
-    - name: Install dependencies
+    - name: 📥 Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r MLProject/requirements.txt
 
-    - name: Run MLflow Project
+    - name: 🚀 Run MLflow Project
       run: |
         cd MLProject
-        mlflow run . --env-manager=local \
+        mlflow run . \
+          --env-manager=local \
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
 
-    - name: Upload Artifacts
+    - name: 📁 Upload artifacts (optional)
       uses: actions/upload-artifact@v4
       with:
         name: model-artifacts
@@ -38,18 +39,18 @@ jobs:
           MLProject/models/random_forest_model.pkl
           MLProject/figures/confusion_matrix_rf.png
 
-    - name: Login to DockerHub
+    - name: 🔐 Login to DockerHub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.zikri15 }}
-        password: ${{ secrets.zikridocker15 }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build Docker Image from Latest MLflow Run
+    - name: 🐳 Build Docker Image from Latest MLflow Run
       run: |
         cd MLProject
         python build_docker.py
 
-    - name: Push Docker Image to DockerHub
+    - name: ☁️ Push Docker Image to DockerHub
       run: |
         docker tag model-mlflow ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
