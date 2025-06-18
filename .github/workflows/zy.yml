@@ -27,3 +27,4 @@ jobs:
       run: |
         cd MLProject
         mlflow run . --env-manager=local
+  mlflow run . --env-manager=local  --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
