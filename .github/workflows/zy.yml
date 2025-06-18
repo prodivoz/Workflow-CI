@@ -25,7 +25,7 @@ jobs:
 
     - name: Run MLflow Project
       run: |
-        cd MLProject
-        mlflow run . --env-manager=local \
+        mlflow run MLProject \
+          --env-manager=local \
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
