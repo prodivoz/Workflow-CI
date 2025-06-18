@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-"""modelling.py"""
-
 import pandas as pd
 import numpy as np
 import mlflow
@@ -48,9 +45,14 @@ for col in missing_cols:
     X_test[col] = 0
 X_test = X_test[X_train.columns]
 
-# Tracking ke MLflow
+# Set experiment (boleh ada, MLflow akan override ke default jika run dibuat via CLI)
 mlflow.set_experiment("RF_GamesPriceClassification")
 
+# ⛳️ Gunakan run yang aktif jika sudah dibuat oleh MLflow
+if mlflow.active_run() is None:
+    mlflow.start_run()  # only for direct execution (e.g., python modelling.py)
+
+# Training dan evaluasi
 params = {
     'n_estimators': 150,
     'max_depth': 10,
@@ -66,7 +68,7 @@ f1_macro = f1_score(y_test, y_pred, average='macro')
 f1_weighted = f1_score(y_test, y_pred, average='weighted')
 cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
 
-# Logging ke MLflow
+# Logging
 mlflow.log_params(params)
 mlflow.log_metric("accuracy", acc)
 mlflow.log_metric("f1_macro", f1_macro)
