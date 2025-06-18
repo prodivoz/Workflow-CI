@@ -32,3 +32,7 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"❌ Gagal membuild Docker image: {e}")
     raise
+
+# Tambahkan ini di akhir get_latest_run.py
+print(f"run_id: {run_id}")
+
