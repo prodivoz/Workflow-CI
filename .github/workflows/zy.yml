@@ -25,16 +25,19 @@ jobs:
 
     - name: Run MLflow Project
       run: |
-        mlflow run MLProject \
-          --env-manager=local \
+        cd MLProject
+        mlflow run . --env-manager=local \
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
 
-      - name: Upload Artifacts
+    - name: Upload Confusion Matrix
       uses: actions/upload-artifact@v4
       with:
-        name: model-artifacts
-        path: |
-          MLProject/models/random_forest_model.pkl
-          MLProject/figures/confusion_matrix_rf.png
+        name: confusion-matrix
+        path: MLProject/figures/confusion_matrix_rf.png
 
+    - name: Upload MLflow Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlflow-artifacts
+        path: MLProject/mlruns
