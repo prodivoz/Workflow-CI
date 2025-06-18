@@ -54,3 +54,9 @@ jobs:
       run: |
         docker tag model-mlflow ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
+
+    - name: Build Docker Image with MLflow
+      run: |
+        cd MLProject
+        python get_latest_run.py
+
