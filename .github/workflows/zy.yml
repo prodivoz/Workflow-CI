@@ -30,33 +30,32 @@ jobs:
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
 
-    - name: Extract latest run_id
+    - name: Get latest run ID
       run: |
         cd MLProject
         python get_latest_run.py > latest_run.txt
-        cat latest_run.txt
 
-    - name: Login DockerHub
+    - name: Read latest run ID
+      id: read_run
+      run: |
+        RUN_ID=$(grep -oP '(?<=run_id: )\w+' MLProject/latest_run.txt)
+        echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+    - name: Login to DockerHub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build Docker image from MLflow model
+    - name: Build Docker Image from MLflow Model
       run: |
         cd MLProject
-        export RUN_ID=$(cat latest_run.txt)
-        export EXP_ID=$(mlflow experiments list | grep "Model ML Eksperimen" | awk '{print $1}')
-        export MODEL_URI=mlruns/$EXP_ID/$RUN_ID/artifacts/model_docker
+        EXP_ID=$(mlflow experiments list | grep "Model ML Eksperimen" | awk '{print $1}')
+        MODEL_URI=mlruns/$EXP_ID/${{ steps.read_run.outputs.run_id }}/artifacts/model_docker
+        echo "Model URI: $MODEL_URI"
         mlflow models build-docker -m $MODEL_URI -n model-mlflow
 
     - name: Push Docker Image
       run: |
         docker tag model-mlflow ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
-
-    - name: Build Docker Image with MLflow
-      run: |
-        cd MLProject
-        python get_latest_run.py
-
