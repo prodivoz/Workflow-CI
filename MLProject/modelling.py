@@ -47,9 +47,18 @@ for col in missing_cols:
     X_test[col] = 0
 X_test = X_test[X_train.columns]
 
-# Start experiment
+# Tentukan experiment
 mlflow.set_experiment("Model ML Eksperimen")
 
+# Wrapper untuk PyFunc deployment
+class SklearnWrapper(mlflow.pyfunc.PythonModel):
+    def load_context(self, context):
+        self.model = joblib.load(context.artifacts["model_path"])
+
+    def predict(self, context, model_input):
+        return self.model.predict(model_input)
+
+# Jalankan eksperimen dan log
 with mlflow.start_run() as run:
     params = {
         "n_estimators": 150,
@@ -87,26 +96,17 @@ with mlflow.start_run() as run:
     model_path = "model.pkl"
     joblib.dump(model, model_path)
 
-    # Wrapper agar bisa di-deploy
-    class SklearnWrapper(mlflow.pyfunc.PythonModel):
-        def load_context(self, context):
-            self.model = joblib.load(context.artifacts["model_path"])
-
-        def predict(self, context, model_input):
-            return self.model.predict(model_input)
-
-    # Log model sebagai PyFunc (wajib untuk Docker)
+    # ✅ Log model PyFunc agar bisa dibuild ke Docker
     mlflow.pyfunc.log_model(
-    artifact_path="model_docker",  # <- penting agar path ini tersedia
-    python_model=SklearnWrapper(),
-    artifacts={"model_path": model_path},
-    input_example=X_test.iloc[:1],
-    signature=mlflow.models.infer_signature(X_test, y_pred)
-)
+        artifact_path="model_docker",
+        python_model=SklearnWrapper(),
+        artifacts={"model_path": model_path},
+        input_example=X_test.iloc[:1],
+        signature=mlflow.models.infer_signature(X_test, y_pred)
+    )
 
-
-    print("Run ID:", run.info.run_id)
-    print(f"Accuracy: {acc:.2f}")
-    print(f"F1 Macro: {f1_macro:.2f}")
-    print(f"F1 Weighted: {f1_weighted:.2f}")
-    print("Model logged at:", mlflow.get_artifact_uri("model_docker"))
+    print("✅ Run ID:", run.info.run_id)
+    print(f"✅ Accuracy: {acc:.2f}")
+    print(f"✅ F1 Macro: {f1_macro:.2f}")
+    print(f"✅ F1 Weighted: {f1_weighted:.2f}")
+    print("✅ Model logged at:", mlflow.get_artifact_uri("model_docker"))
