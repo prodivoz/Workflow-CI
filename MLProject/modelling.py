@@ -97,12 +97,13 @@ with mlflow.start_run() as run:
 
     # Log model sebagai PyFunc (wajib untuk Docker)
     mlflow.pyfunc.log_model(
-        artifact_path="model_docker",
-        python_model=SklearnWrapper(),
-        artifacts={"model_path": model_path},
-        input_example=X_test.iloc[:1],
-        signature=mlflow.models.infer_signature(X_test, y_pred)
-    )
+    artifact_path="model_docker",  # <- penting agar path ini tersedia
+    python_model=SklearnWrapper(),
+    artifacts={"model_path": model_path},
+    input_example=X_test.iloc[:1],
+    signature=mlflow.models.infer_signature(X_test, y_pred)
+)
+
 
     print("Run ID:", run.info.run_id)
     print(f"Accuracy: {acc:.2f}")
