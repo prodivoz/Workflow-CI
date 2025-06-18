@@ -29,3 +29,12 @@ jobs:
           --env-manager=local \
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
+
+      - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: model-artifacts
+        path: |
+          MLProject/models/random_forest_model.pkl
+          MLProject/figures/confusion_matrix_rf.png
+
