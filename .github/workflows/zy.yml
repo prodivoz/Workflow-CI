@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12.7'
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
@@ -26,6 +26,6 @@ jobs:
     - name: Run MLflow Project
       run: |
         cd MLProject
-        mlflow run . --env-manager=local
-        
-        mlflow run . --env-manager=local  --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
+        mlflow run . --env-manager=local \
+          --experiment-name "Model ML Eksperimen" \
+          --run-name "model_ml_eksperimen"
