@@ -48,9 +48,11 @@ X_test = X_test[X_train.columns]
 # Set experiment (boleh ada, MLflow akan override ke default jika run dibuat via CLI)
 mlflow.set_experiment("RF_GamesPriceClassification")
 
-# ⛳️ Gunakan run yang aktif jika sudah dibuat oleh MLflow
-if mlflow.active_run() is None:
-    mlflow.start_run()  # only for direct execution (e.g., python modelling.py)
+
+run = mlflow.active_run()
+if run:
+    print(f"Using active run ID: {run.info.run_id}")
+
 
 # Training dan evaluasi
 params = {
