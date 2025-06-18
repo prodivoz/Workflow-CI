@@ -1,4 +1,4 @@
-name: spam-classifier
+name: best selling games-classifier
 
 conda_env: conda.yaml
 
