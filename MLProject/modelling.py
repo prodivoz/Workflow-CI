@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import mlflow
 import mlflow.sklearn
+import mlflow.pyfunc
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
@@ -47,7 +48,7 @@ X_test = X_test[X_train.columns]
 # MLflow tracking
 mlflow.set_experiment("Model ML Eksperimen")
 
-with mlflow.start_run():
+with mlflow.start_run() as run:
     params = {
         'n_estimators': 150,
         'max_depth': 10,
@@ -63,13 +64,13 @@ with mlflow.start_run():
     f1_weighted = f1_score(y_test, y_pred, average='weighted')
     cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
 
-    # Logging metrics & params
+    # Logging manual
     mlflow.log_params(params)
     mlflow.log_metric("accuracy", acc)
     mlflow.log_metric("f1_macro", f1_macro)
     mlflow.log_metric("f1_weighted", f1_weighted)
 
-    # Simpan confusion matrix sebagai artefak
+    # Simpan confusion matrix
     os.makedirs("figures", exist_ok=True)
     cm_path = "figures/confusion_matrix_rf.png"
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['low', 'medium', 'high'])
@@ -78,12 +79,28 @@ with mlflow.start_run():
     plt.savefig(cm_path)
     mlflow.log_artifact(cm_path)
 
-    # Simpan model dalam bentuk file
+    # Simpan model ke file
     os.makedirs("models", exist_ok=True)
     model_path = "models/random_forest_model.pkl"
     joblib.dump(model, model_path)
     mlflow.log_artifact(model_path)
 
+    # ✅ Logging model sebagai pyfunc agar bisa di-dockerize
+    class SklearnWrapper(mlflow.pyfunc.PythonModel):
+        def load_context(self, context):
+            import joblib
+            self.model = joblib.load(context.artifacts["model_path"])
+
+        def predict(self, context, model_input):
+            return self.model.predict(model_input)
+
+    mlflow.pyfunc.log_model(
+        artifact_path="model_docker",
+        python_model=SklearnWrapper(),
+        artifacts={"model_path": model_path}
+    )
+
+    print(f"Run ID: {run.info.run_id}")
     print(f"Accuracy: {acc:.2f}")
     print(f"F1 Macro: {f1_macro:.2f}")
     print(f"F1 Weighted: {f1_weighted:.2f}")
