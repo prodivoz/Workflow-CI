@@ -107,7 +107,7 @@ mlflow.pyfunc.save_model(
     signature=mlflow.models.infer_signature(X_test, y_pred)
 )
 
-mlflow.log_artifacts(pyfunc_path, artifact_path="model"
+mlflow.log_artifacts(pyfunc_path, artifact_path="model")
 
 
         # ✅ Display useful info
