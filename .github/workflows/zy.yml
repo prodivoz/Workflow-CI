@@ -48,15 +48,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: mlruns-model
-          path: ./downloaded_model  
+          path: ./downloaded_model
+
 
 
       - name: Upload MLflow Model Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlruns-model
-          path: MLProject/mlruns/**/artifacts/
-          if-no-files-found: warn
+          path: MLProject/mlruns/**/artifacts/model
+          if-no-files-found: error
+
 
 
       - name: Build Docker Image
