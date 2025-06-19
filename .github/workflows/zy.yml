@@ -37,6 +37,10 @@ jobs:
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Validated RUN_ID: $RUN_ID"
 
+      - name: List artifacts before upload
+        run: |
+          echo "📂 Contents of artifact folder:"
+          ls -R MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts || echo "⚠️ Artifacts folder not found!"
 
       - name: Upload ML artifact
         uses: actions/upload-artifact@v4
