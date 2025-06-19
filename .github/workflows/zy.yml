@@ -18,26 +18,26 @@ jobs:
       WORKING_DIRECTORY: ./MLProject
 
     steps:
-    - name: Checkout repository
+    - name: 📥 Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: 🐍 Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install dependencies
+    - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r ${{ env.WORKING_DIRECTORY }}/requirements.txt
         pip install dvc[s3]
 
-    - name: Run MLflow Project to train model
+    - name: 🧠 Run MLflow Project to train model
       run: |
         cd ${{ env.WORKING_DIRECTORY }}
         mlflow run . --env-manager=local --run-name "Training from CI" --experiment-name "Model ML Eksperimen"
 
-    - name: Get latest MLflow run_id
+    - name: 🏷️ Get latest MLflow run_id
       id: get_run_id
       run: |
         echo "🔍 Getting latest run ID..."
@@ -70,9 +70,9 @@ jobs:
         print(f"✅ RUN_ID: {run_id}")
         EOF
 
-    - name: Download model artifact from DagsHub safely
+    - name: 📥 Download model artifact from DagsHub safely
       run: |
-        echo "📥 Starting safe download from DagsHub"
+        echo "📥 Start safe download from DagsHub"
         RUN_ID=${{ env.RUN_ID }}
         ARTIFACT_NAME="model"
         DEST_DIR="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
@@ -80,41 +80,39 @@ jobs:
         mkdir -p "$DEST_DIR"
         echo "🕒 Waiting for DagsHub to publish artifact..."
 
-        for i in {1..5}; do
+        for i in {1..10}; do
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://dagshub.com/${{ env.MLFLOW_TRACKING_USERNAME }}/Workflow-CI.mlflow/artifacts/$ARTIFACT_NAME?run_id=$RUN_ID")
 
           if [ "$STATUS_CODE" = "200" ]; then
-            echo "✅ Artifact ready. Starting download..."
+            echo "✅ Artifact is ready! Starting download..."
             wget -r -np -nH --cut-dirs=5 \
               --reject "index.html*" \
               "https://dagshub.com/${{ env.MLFLOW_TRACKING_USERNAME }}/Workflow-CI.mlflow/artifacts/$ARTIFACT_NAME?run_id=$RUN_ID" \
               -P "$DEST_DIR"
-            break
+            exit 0
           else
-            echo "⏳ Artifact not ready yet (HTTP $STATUS_CODE). Retrying in 10s..."
+            echo "⏳ Not ready yet (HTTP $STATUS_CODE). Retrying in 10s..."
             sleep 10
-          fi
-
-          if [ "$i" = "5" ]; then
-            echo "❌ Artifact download failed after 5 attempts."
-            exit 1
           fi
         done
 
-    - name: Upload model to GitHub artifact
+        echo "❌ Artifact download failed after retries."
+        exit 1
+
+    - name: 📦 Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
       with:
         name: sklearn-model-artifact
         path: ${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model
 
-    - name: Log in to Docker Hub
+    - name: 🔐 Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Build and Push Docker Image
+    - name: 🐳 Build and Push Docker Image
       run: |
         MODEL_URI="runs:/${{ env.RUN_ID }}/model"
         echo "🐳 Building Docker image from URI: $MODEL_URI"
