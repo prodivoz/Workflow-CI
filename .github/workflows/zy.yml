@@ -49,7 +49,7 @@ jobs:
           DOCKER_BUILDKIT=1 docker build -t prodivoz/prodivoz_model-mlflow MLProject
 
       - name: Log in to DockerHub
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
