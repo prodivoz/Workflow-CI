@@ -40,13 +40,11 @@ jobs:
     - name: Get latest MLflow run_id
       run: |
         echo "Getting latest run ID..."
-        # This inline script must have no indentation relative to the EOF marker
         python <<EOF
         import mlflow
         import os
         import sys
         
-        # Set tracking URI from environment
         mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
         experiment_name = "Model ML Eksperimen"
         client = mlflow.tracking.MlflowClient()
@@ -57,7 +55,6 @@ jobs:
                 print(f"❌ Experiment '{experiment_name}' not found.")
                 sys.exit(1)
         
-            # Search for the latest run
             runs = client.search_runs(
                 experiment_ids=[experiment.experiment_id],
                 order_by=["start_time DESC"],
@@ -70,7 +67,6 @@ jobs:
             run_id = runs[0].info.run_id
             print(f"✅ Latest run ID: {run_id}")
         
-            # Export RUN_ID for subsequent steps
             with open(os.environ["GITHUB_ENV"], "a") as f:
                 f.write(f"RUN_ID={run_id}\n")
         
@@ -79,29 +75,47 @@ jobs:
             sys.exit(1)
         EOF
 
-    - name: Download model artifacts from MLflow
+    - name: Download model artifacts via Python Script
       run: |
         echo "📥 Downloading model artifact from run: ${{ env.RUN_ID }}"
-        # The destination path for the MLflow Model directory
-        ARTIFACT_DESTINATION="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
+        python <<EOF
+        import mlflow
+        import os
+        import sys
+        import shutil
         
-        # Ensure the parent directory exists and is clean
-        mkdir -p $(dirname "$ARTIFACT_DESTINATION")
-        rm -rf "$ARTIFACT_DESTINATION"
-
-        # Download the 'model' artifact from the run
-        mlflow artifacts download \
-          --run-id ${{ env.RUN_ID }} \
-          --artifact-path model \
-          -d "$ARTIFACT_DESTINATION"
+        run_id = os.environ.get("RUN_ID")
+        if not run_id:
+            print("❌ RUN_ID not set.")
+            sys.exit(1)
         
-        echo "✅ Artifacts downloaded to $ARTIFACT_DESTINATION"
+        # This is the destination directory for the downloaded model
+        artifact_destination = os.path.join("${{ env.WORKING_DIRECTORY }}", "model_artifacts", "sklearn_model")
+        
+        # Ensure the destination directory is clean before download
+        if os.path.exists(artifact_destination):
+            shutil.rmtree(artifact_destination)
+        os.makedirs(artifact_destination, exist_ok=True)
+        
+        try:
+            # Use the programmatic API which is more direct
+            mlflow.artifacts.download_artifacts(
+                run_id=run_id,
+                artifact_path="model",  # The name of the artifact logged in the training script
+                dst_path=artifact_destination
+            )
+            print(f"✅ Artifacts downloaded successfully to {artifact_destination}")
+        
+        except Exception as e:
+            print(f"An error occurred during artifact download: {e}")
+            sys.exit(1)
+        EOF
 
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
       with:
         name: sklearn-model-artifact
-        path: ${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model/model
+        path: ${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
@@ -111,12 +125,11 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        # Correct path to the downloaded model artifact
-        MODEL_URI="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model/model"
+        # The MODEL_URI now points directly to the directory containing the MLmodel file
+        MODEL_URI="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
         
         echo "🐳 Building Docker image from URI: $MODEL_URI"
         
-        # Build the docker image using the MLflow command
         mlflow models build-docker \
           --model-uri "$MODEL_URI" \
           --name "${{ env.DOCKER_IMAGE_NAME }}"
