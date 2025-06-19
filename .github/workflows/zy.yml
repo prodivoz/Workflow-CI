@@ -75,37 +75,15 @@ jobs:
             sys.exit(1)
         EOF
 
-    - name: Download model artifacts via Python Script
+    - name: Download model artifacts
       run: |
-        echo "📥 Start Downloading model artifact from run: ${{ env.RUN_ID }}"
-        python <<EOF
-        import mlflow
-        import os
-        import sys
-        import shutil
-
-        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-        run_id = os.environ.get("RUN_ID")
-        if not run_id:
-            print("❌ RUN_ID not set.")
-            sys.exit(1)
-
-        artifact_destination = os.path.join("${{ env.WORKING_DIRECTORY }}", "model_artifacts", "sklearn_model")
-        if os.path.exists(artifact_destination):
-            shutil.rmtree(artifact_destination)
-        os.makedirs(artifact_destination, exist_ok=True)
-
-        try:
-            mlflow.artifacts.download_artifacts(
-                run_id=run_id,
-                artifact_path="model",
-                dst_path=artifact_destination
-            )
-            print(f"✅ Artifacts downloaded successfully to {artifact_destination}")
-        except Exception as e:
-            print(f"❌ An error occurred during artifact download: {e}")
-            sys.exit(1)
-        EOF
+        echo "📥 Downloading model artifact for run: $RUN_ID"
+        mlflow artifacts download \
+          --run-id $RUN_ID \
+          --artifact-path model \
+          -d ./downloaded_artifacts
+        mkdir -p model
+        mv ./downloaded_artifacts/model ./model/sklearn_model
 
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
