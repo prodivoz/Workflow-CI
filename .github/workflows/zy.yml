@@ -1,122 +1,78 @@
-name: MLflow CI
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+name: CI
+on: [push]
 
 jobs:
-  train-and-deploy:
+  build:
     runs-on: ubuntu-latest
-
-    env:
-      MLFLOW_TRACKING_USERNAME: prodivoz
-      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-      MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
-      DOCKER_IMAGE_NAME: zikri15/prodivoz_model-mlflow
-      PYTHON_VERSION: '3.12'
-      WORKING_DIRECTORY: ./MLProject
-
     steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ${{ env.WORKING_DIRECTORY }}/requirements.txt
-        pip install dvc[s3]
+      - name: Check Env
+        run: pip list
 
-    - name: 🧠 Run MLflow Project to train model
-      run: |
-        cd ${{ env.WORKING_DIRECTORY }}
-        mlflow run . --env-manager=local --run-name "Training from CI" --experiment-name "Model ML Eksperimen"
+      - name: Install dependencies
+        run: |
+          pip install mlflow
+          # echo "MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}" >> $GITHUB_ENV
+          echo "MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_TRACKING_USERNAME }}" >> $GITHUB_ENV
+          echo "MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_TRACKING_PASSWORD }}" >> $GITHUB_ENV
 
-    - name: 🏷️ Get latest MLflow run_id
-      id: get_run_id
-      run: |
-        echo "🔍 Getting latest run ID..."
-        python <<EOF
-        import mlflow
-        import os
-        import sys
-
-        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-        experiment_name = "Model ML Eksperimen"
-        client = mlflow.tracking.MlflowClient()
-
-        experiment = client.get_experiment_by_name(experiment_name)
-        if experiment is None:
-            print("❌ Experiment not found.")
-            sys.exit(1)
-
-        runs = client.search_runs(
-            experiment_ids=[experiment.experiment_id],
-            order_by=["start_time DESC"],
-            max_results=1
-        )
-        if not runs:
-            print("❌ No runs found.")
-            sys.exit(1)
-
-        run_id = runs[0].info.run_id
-        with open(os.environ["GITHUB_ENV"], "a") as f:
-            f.write(f"RUN_ID={run_id}\n")
-        print(f"✅ RUN_ID: {run_id}")
-        EOF
-
-    - name: 📥 Download model artifact from DagsHub safely
-      run: |
-        echo "📥 Start safe download from DagsHub"
-        RUN_ID=${{ env.RUN_ID }}
-        ARTIFACT_NAME="model"
-        DEST_DIR="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
-
-        mkdir -p "$DEST_DIR"
-        echo "🕒 Waiting for DagsHub to publish artifact..."
-
-        for i in {1..10}; do
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://dagshub.com/${{ env.MLFLOW_TRACKING_USERNAME }}/Workflow-CI.mlflow/artifacts/$ARTIFACT_NAME?run_id=$RUN_ID")
-
-          if [ "$STATUS_CODE" = "200" ]; then
-            echo "✅ Artifact is ready! Starting download..."
-            wget -r -np -nH --cut-dirs=5 \
-              --reject "index.html*" \
-              "https://dagshub.com/${{ env.MLFLOW_TRACKING_USERNAME }}/Workflow-CI.mlflow/artifacts/$ARTIFACT_NAME?run_id=$RUN_ID" \
-              -P "$DEST_DIR"
-            exit 0
-          else
-            echo "⏳ Not ready yet (HTTP $STATUS_CODE). Retrying in 10s..."
-            sleep 10
+      - name: Run MLflow Project and Capture RUN_ID
+        id: run_mlflow
+        run: |
+          cd MLProject
+          mlflow run . --env-manager=local 2>&1 | tee output.log
+          
+          RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
+          
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
           fi
-        done
+          
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          echo "Validated RUN_ID: $RUN_ID"
 
-        echo "❌ Artifact download failed after retries."
-        exit 1
+      - name: Upload ML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts
 
-    - name: 📦 Upload model to GitHub artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sklearn-model-artifact
-        path: ${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model
+      # - name: Build Docker Model
+      #   run: |
+      #     MODEL_PATH="MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model"
+          
+      #     if [ ! -d "$MODEL_PATH" ]; then
+      #       echo "Model artifacts not found at $MODEL_PATH"
+      #       exit 1
+      #     fi
 
-    - name: 🔐 Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      #     mlflow models build-docker \
+      #       --model-uri "$MODEL_PATH" \
+      #       --name "hiring_prediction_model"\
+      #       --enable-mlserver
 
-    - name: 🐳 Build and Push Docker Image
-      run: |
-        MODEL_URI="runs:/${{ env.RUN_ID }}/model"
-        echo "🐳 Building Docker image from URI: $MODEL_URI"
-        mlflow models build-docker \
-          --model-uri "$MODEL_URI" \
-          --name "${{ env.DOCKER_IMAGE_NAME }}"
-        docker push "${{ env.DOCKER_IMAGE_NAME }}:latest"
+      - name: Build Docker Model
+        run: |
+          echo "Using RUN_ID: ${{ env.RUN_ID }}"
+          export MLFLOW_TRACKING_URI=./MLProject/mlruns
+          DOCKER_BUILDKIT=1 docker build -t hiring_prediction_model MLProject
+
+          
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag Docker Image
+        run: docker tag hiring_prediction_model ${{ vars.DOCKERHUB_USERNAME }}/hiring_prediction_model:latest
+
+      - name: Push Docker Image
+        run: docker push ${{ vars.DOCKERHUB_USERNAME }}/hiring_prediction_model:latest
