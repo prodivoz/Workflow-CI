@@ -43,12 +43,22 @@ jobs:
 
           echo "📁 Debug: Listing all files under ./mlruns"
           find ./mlruns
+    
+      -   name: Download model artifacts
+          run: |
+            echo "📥 Downloading model artifact for run: $RUN_ID"
+            mlflow artifacts download \
+              --run-id $RUN_ID \
+              --artifact-path model \
+              -d ./downloaded_artifacts
+            mkdir -p model
+            mv ./downloaded_artifacts/model ./model/mlruns-model
 
       - name: Upload MLflow Model Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlruns-model
-          path: MLProject/mlruns/**/artifacts/model
+          path: MLProject/mlruns/**/artifacts/
           if-no-files-found: warn
 
       - name: Build Docker Image
