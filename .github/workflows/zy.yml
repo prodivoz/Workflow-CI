@@ -1,64 +1,70 @@
-name: zy
-on: [push]
+name: MLflow CI
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  train-and-deploy:
     runs-on: ubuntu-latest
+
+    env:
+      MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
+      MLFLOW_TRACKING_USERNAME: prodivoz
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      DOCKER_IMAGE: prodivoz/games-price-model:latest
+
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
-      - name: Check Env
-        run: pip list
-
-      - name: Install dependencies
+      - name: 🧪 Check Env
         run: |
-          pip install mlflow
-          echo "MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_TRACKING_USERNAME }}" >> $GITHUB_ENV
-          echo "MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_TRACKING_PASSWORD }}" >> $GITHUB_ENV
+          echo "MLFLOW_TRACKING_URI: $MLFLOW_TRACKING_URI"
 
-      - name: Run MLflow Project and Capture RUN_ID
-        id: run_mlflow
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r MLProject/requirements.txt
+
+      - name: 🚀 Run MLflow Project and Capture RUN_ID
+        id: run
         run: |
           cd MLProject
-          export MLFLOW_TRACKING_URI=./mlruns
-          mlflow run . --env-manager=local 2>&1 | tee output.log
-      
-          RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
-          if [ -z "$RUN_ID" ]; then
-            RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
-          fi
-      
+          echo ">>> Running MLflow project"
+          RUN_OUTPUT=$(mlflow run . --env-manager=local 2>&1)
+          echo "$RUN_OUTPUT"
+
+          RUN_ID=$(echo "$RUN_OUTPUT" | grep -oE "Run ID: ([a-f0-9\-]+)" | awk '{print $3}' | tail -1)
+          echo "Captured RUN_ID: $RUN_ID"
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-          echo "Validated RUN_ID: $RUN_ID"
 
-
-      - name: Upload ML artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: model
-          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model
-          if-no-files-found: warn
-
-      - name: Build Docker Model
+      - name: 📤 Download ML artifact
         run: |
-          echo "Using RUN_ID: ${{ env.RUN_ID }}"
-          export MLFLOW_TRACKING_URI=./MLProject/mlruns
-          DOCKER_BUILDKIT=1 docker build -t zikri15/prodivoz_model-mlflow MLProject
+          echo "🔽 Downloading model artifact from run: $RUN_ID"
+          mlflow artifacts download --run-id $RUN_ID --artifact-path rf_classifier -d ./model_artifact --tracking-uri $MLFLOW_TRACKING_URI
+          ls -R ./model_artifact
 
-      - name: Log in to DockerHub
+      - name: 🐳 Build Docker Image
+        run: |
+          docker build -t $DOCKER_IMAGE ./model_artifact
+
+      - name: 🔐 Log in to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Tag Docker Image
-        run: docker tag zikri15/prodivoz_model-mlflow zikri15/prodivoz_model-mlflow:latest
+      - name: 🏷️ Tag Docker Image
+        run: |
+          docker tag $DOCKER_IMAGE $DOCKER_IMAGE
 
-      - name: Push Docker Image
-        run: docker push zikri15/prodivoz_model-mlflow:latest
+      - name: 📤 Push Docker Image
+        run: |
+          docker push $DOCKER_IMAGE
