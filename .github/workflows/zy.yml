@@ -76,20 +76,24 @@ jobs:
             sys.exit(1)
         EOF
 
-    - name: Download model artifacts manually from DagsHub
-
-      run: |
+        - name: Download model artifacts manually from DagsHub
+        run: |
         echo "📥 Start manual download from DagsHub"
+        
         RUN_ID=${{ env.RUN_ID }}
-        ARTIFACT_NAME="model"
+        ARTIFACT_NAME="model"  # UBAH ke "best_model" kalau kamu pakai itu saat log_model
         DEST_DIR="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
         
         mkdir -p "$DEST_DIR"
 
-         wget -r -np -nH --cut-dirs=5 \
+        echo "🕒 Waiting for DagsHub to publish artifact..."
+        sleep 20  # tunggu agar DagsHub sempat publish
+
+        wget -r -np -nH --cut-dirs=5 \
           --reject "index.html*" \
           "https://dagshub.com/${{ env.MLFLOW_TRACKING_USERNAME }}/Workflow-CI.mlflow/artifacts/$ARTIFACT_NAME?run_id=$RUN_ID" \
           -P "$DEST_DIR"
+
 
         
        
