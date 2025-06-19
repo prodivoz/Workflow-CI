@@ -26,15 +26,17 @@ jobs:
         id: run_mlflow
         run: |
           cd MLProject
+          export MLFLOW_TRACKING_URI=./mlruns
           mlflow run . --env-manager=local 2>&1 | tee output.log
-          
+      
           RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
           fi
-          
+      
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Validated RUN_ID: $RUN_ID"
+
 
       - name: Upload ML artifact
         uses: actions/upload-artifact@v4
