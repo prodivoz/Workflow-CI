@@ -46,7 +46,7 @@ jobs:
         run: |
           echo "Using RUN_ID: ${{ env.RUN_ID }}"
           export MLFLOW_TRACKING_URI=./MLProject/mlruns
-          DOCKER_BUILDKIT=1 docker build -t prodivoz/prodivoz_model-mlflow MLProject
+          DOCKER_BUILDKIT=1 docker build -t zikri15/prodivoz_model-mlflow MLProject
 
       - name: Log in to DockerHub
         uses: docker/login-action@v3
@@ -55,7 +55,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Tag Docker Image
-        run: docker tag prodivoz/prodivoz_model-mlflow prodivoz/prodivoz_model-mlflow:latest
+        run: docker tag prodivoz/prodivoz_model-mlflow zikri15/prodivoz_model-mlflow:latest
 
       - name: Push Docker Image
-        run: docker push prodivoz/prodivoz_model-mlflow:latest
+        run: docker push zikri15/prodivoz_model-mlflow:latest
