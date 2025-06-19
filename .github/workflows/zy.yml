@@ -49,7 +49,7 @@ jobs:
               print(f'❌ Experiment {experiment_name} not found.')
               exit(1)
 
-           runs = client.search_runs(experiment_ids=[experiment.experiment_id], order_by=['start_time DESC'])
+            runs = client.search_runs(experiment_ids=[experiment.experiment_id], order_by=['start_time DESC'])
 
             if not runs:
                 print('❌ No MLflow runs found.')
