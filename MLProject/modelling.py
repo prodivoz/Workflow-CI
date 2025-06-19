@@ -9,9 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.metrics import (
-    accuracy_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
-)
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 
 # ========== MLflow Tracking Setup ==========
 mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "./mlruns")
@@ -26,7 +24,7 @@ class SklearnWrapper(mlflow.pyfunc.PythonModel):
     def predict(self, context, model_input: pd.DataFrame) -> np.ndarray:
         return self.model.predict(model_input)
 
-# ========== Training Function ==========
+# ========== Main Function ==========
 def train_and_log():
     print("📥 Loading data...")
     df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
@@ -63,10 +61,10 @@ def train_and_log():
         X_test[col] = 0
     X_test = X_test[X_train.columns]
 
-    # === Run must already exist if using mlflow run ===
+    # Gunakan run aktif dari mlflow CLI
     run = mlflow.active_run()
     if run is None:
-        run = mlflow.start_run()
+        raise RuntimeError("⚠️ No active MLflow run. This script should be executed via `mlflow run`.")
 
     print(f"🚀 Active MLflow Run ID: {run.info.run_id}")
 
@@ -86,7 +84,7 @@ def train_and_log():
         "f1_weighted": f1_weighted
     })
 
-    # === Save confusion matrix ===
+    # Simpan dan log confusion matrix
     os.makedirs("figures", exist_ok=True)
     fig_path = "figures/confusion_matrix.png"
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["low", "medium", "high"])
@@ -95,12 +93,12 @@ def train_and_log():
     plt.savefig(fig_path)
     mlflow.log_artifact(fig_path)
 
-    # === Save model to file ===
+    # Simpan model ke file dan log
     model_path = "model.pkl"
     joblib.dump(model, model_path)
     mlflow.log_artifact(model_path)
 
-    # === Log as PyFunc Model ===
+    # Log model sebagai PyFunc
     mlflow.pyfunc.log_model(
         artifact_path="model",
         python_model=SklearnWrapper(),
@@ -112,16 +110,11 @@ def train_and_log():
     print("✅ Metrics logged")
     print("📦 Model saved to:", mlflow.get_artifact_uri("model"))
 
-    # === Debug: List files ===
+    # Debug: list isi folder
     artifact_uri = mlflow.get_artifact_uri("model")
     if artifact_uri.startswith("file://"):
         print("📂 Contents of model artifact folder:")
         os.system("ls -R " + artifact_uri.replace("file://", ""))
-
-    # Only end run if started manually
-    if mlflow.active_run().info.run_id != run.info.run_id:
-        mlflow.end_run()
-
 
 if __name__ == "__main__":
     train_and_log()
