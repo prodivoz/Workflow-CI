@@ -109,6 +109,9 @@ def train_and_log():
         print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}, F1_macro: {f1_macro:.2f}")
         print("📁 Model artifact URI:", mlflow.get_artifact_uri("model"))
+        print("📂 Logged files in model artifact path:")
+os.system("ls -R " + mlflow.get_artifact_uri("model").replace("file://", ""))
+
 
 if __name__ == "__main__":
     train_and_log()
