@@ -1,26 +1,18 @@
+# Gunakan Python image ringan
 FROM python:3.12-slim
 
+# Set working directory
 WORKDIR /app
 
-COPY . .
+# Salin seluruh isi artifact model ke dalam image
+COPY model_artifact /app/model
 
-RUN apt-get update && \
-    apt-get install -y wget git gcc python3-dev
+# Install MLflow dan dependensi model
+RUN pip install --upgrade pip && \
+    pip install mlflow scikit-learn pandas numpy
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh && \
-    /opt/conda/bin/conda init bash
+# Expose port API default MLflow
+EXPOSE 5000
 
-ENV PATH="/opt/conda/bin:$PATH"
-
-RUN conda env create -f conda.yaml && \
-    conda env list
-
-RUN apt-get remove -y gcc python3-dev && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
-
-# Use correct environment name (mlflow-env instead of mlflow_env)
-SHELL ["conda", "run", "-n", "mlflow-env", "/bin/bash", "-c"]
-ENTRYPOINT ["conda", "run", "-n", "mlflow-env", "mlflow", "run", "."]
+# Jalankan MLflow model sebagai REST API
+CMD ["mlflow", "models", "serve", "-m", "/app/model", "-p", "5000", "--no-conda"]
