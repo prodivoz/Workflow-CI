@@ -2,21 +2,26 @@ name: MLflow CI
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  train-and-deploy:
+  train-model:
     runs-on: ubuntu-latest
-
+    
+    env:
+      MLFLOW_TRACKING_USERNAME: prodivoz
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      MLFLOW_TRACKING_URI     : https://dagshub.com/prodivoz/Workflow-CI.mlflow
+      
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version: '3.12.7'
 
     - name: Install dependencies
       run: |
@@ -26,36 +31,76 @@ jobs:
     - name: Run MLflow Project
       run: |
         cd MLProject
-        mlflow run . --env-manager=local \
-          --experiment-name "Model ML Eksperimen" \
-          --run-name "model_ml_eksperimen"
+        mlflow run . --env-manager=local  --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
 
-    - name: Get latest run ID
+    - name: Get latest MLflow run_id
       run: |
-        cd MLProject
-        python get_latest_run.py > latest_run.txt
+        echo "Getting latest run ID..."
+        python <<EOF
+        import mlflow
+        import os
+        
+        # Set tracking URI dari environment (misal dari DagsHub)
+        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+        
+        experiment_name = "Model ML Eksperimen"
+        client = mlflow.tracking.MlflowClient()
+        experiment = client.get_experiment_by_name(experiment_name)
+        
+        if experiment is None:
+            print(f"❌ Experiment '{experiment_name}' not found.")
+            exit(1)
+        
+        runs = client.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"])
+        
+        if not runs:
+            print("❌ No MLflow runs found.")
+            exit(1)
+        
+        run_id = runs[0].info.run_id
+        print(f"✅ Latest run ID: {run_id}")
+        
+        with open(os.environ["GITHUB_ENV"], "a") as f:
+            f.write(f"RUN_ID={run_id}\n")
+        EOF
 
-    - name: Read latest run ID
-      id: read_run
+    - name: Download model artifacts
       run: |
-        RUN_ID=$(grep -oP '(?<=run_id: )\w+' MLProject/latest_run.txt)
-        echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
+        echo "📥 Downloading model artifact for run: $RUN_ID"
+        mlflow artifacts download \
+          --run-id $RUN_ID \
+          --artifact-path model \
+          -d ./MLProject/model_artifacts/tmp_download
+        mkdir -p ./MLProject/model_artifacts
+        mv ./MLProject/model_artifacts/tmp_download/model ./MLProject/model_artifacts/sklearn_model
+        rm -rf ./MLProject/model_artifacts/tmp_download
+    
+    - name: Upload to GitHub artifact
+      uses: actions/upload-artifact@v4
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        name: mlflow-artifact
+        path: ./MLProject/model_artifacts/mlflow-artifacts
 
-    - name: Build Docker Image from MLflow Model
+
+    - name: Build Docker Model
       run: |
-        cd MLProject
-        RUN_ID=${{ steps.read_run.outputs.run_id }}
-        MODEL_URI=mlruns/0/$RUN_ID/artifacts/model_docker
-        echo "Model URI: $MODEL_URI"
-        mlflow models build-docker -m $MODEL_URI -n model-mlflow
+        echo "🐳 Building Docker image for the model"
+        mlflow models build-docker \
+          --model-uri ./MLProject/model_artifacts/mlflow-artifacts \
+          --name zikri15/prodivoz_model-mlflow
+          
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Tag Docker Image
+      run: |
+        echo "🏷️ Tagging Docker image with :latest"
+        docker tag zikri15/prodivoz_model-mlflow:latest
 
     - name: Push Docker Image
       run: |
-        docker tag model-mlflow ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/model-mlflow:latest
+        echo "📤 Pushing Docker image to Docker Hub"
+        docker zikri15/prodivoz_model-mlflow:latest
