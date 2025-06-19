@@ -1,4 +1,3 @@
-import argparse
 import os
 import pandas as pd
 import numpy as np
@@ -18,11 +17,20 @@ mlflow_username     = os.getenv("MLFLOW_TRACKING_USERNAME")
 mlflow_password     = os.getenv("MLFLOW_TRACKING_PASSWORD")
 os.environ["MLFLOW_TRACKING_USERNAME"] = mlflow_username
 os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
+
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 mlflow.set_experiment("Model ML Eksperimen")
 mlflow.sklearn.autolog()
 
+class SklearnWrapper(mlflow.pyfunc.PythonModel):
+    def load_context(self, context):
+        self.model = joblib.load(context.artifacts["model_path"])
+
+    def predict(self, context, model_input):
+        return self.model.predict(model_input)
+
 def main():
+    # Load data
     df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
     df['price_class'] = pd.qcut(df['price'], q=3, labels=['low', 'medium', 'high'])
 
@@ -33,6 +41,7 @@ def main():
         X, y, test_size=0.2, stratify=y, random_state=42
     )
 
+    # Preprocessing
     cat_cols = X_train.select_dtypes(include='object').columns
     num_cols = X_train.select_dtypes(exclude='object').columns
 
@@ -47,17 +56,11 @@ def main():
     X_train = pd.concat([X_train[num_cols], X_train_cat], axis=1)
     X_test = pd.concat([X_test[num_cols], X_test_cat], axis=1)
 
+    # Ensure consistent features
     missing_cols = set(X_train.columns) - set(X_test.columns)
     for col in missing_cols:
         X_test[col] = 0
     X_test = X_test[X_train.columns]
-
-    class SklearnWrapper(mlflow.pyfunc.PythonModel):
-        def load_context(self, context):
-            self.model = joblib.load(context.artifacts["model_path"])
-
-        def predict(self, context, model_input):
-            return self.model.predict(model_input)
 
     with mlflow.start_run() as run:
         params = {
@@ -75,6 +78,7 @@ def main():
         f1_weighted = f1_score(y_test, y_pred, average='weighted')
         cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
 
+        # Log metrics & confusion matrix
         mlflow.log_params(params)
         mlflow.log_metrics({
             "accuracy": acc,
@@ -90,21 +94,20 @@ def main():
         plt.savefig(fig_path)
         mlflow.log_artifact(fig_path)
 
+        # Save model locally for wrapping
         model_path = "model.pkl"
         joblib.dump(model, model_path)
 
-        # ✅ FIX: Save locally, then log manually
-        pyfunc_path = "model_pyfunc"
-        mlflow.pyfunc.save_model(
-            path=pyfunc_path,
+        # ✅ Proper model logging with pyfunc
+        mlflow.pyfunc.log_model(
+            artifact_path="model",
             python_model=SklearnWrapper(),
             artifacts={"model_path": model_path},
             input_example=X_test.iloc[:1],
             signature=mlflow.models.infer_signature(X_test, y_pred)
         )
 
-        mlflow.log_artifacts(pyfunc_path, artifact_path="model")
-
+        # ✅ Display useful info
         print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}")
         print(f"✅ F1 Macro: {f1_macro:.2f}")
