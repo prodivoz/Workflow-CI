@@ -1,5 +1,4 @@
 import mlflow
-import subprocess
 
 # Ambil ID eksperimen berdasarkan nama
 experiment = mlflow.get_experiment_by_name("Model ML Eksperimen")
@@ -16,23 +15,6 @@ runs = mlflow.search_runs(
 if runs.empty:
     raise ValueError("Tidak ada run ditemukan di experiment ini.")
 run_id = runs.iloc[0]["run_id"]
-print(f"✔️ Found latest run_id: {run_id}")
 
-# Path model yang akan dibuild ke Docker
-model_uri = f"mlruns/{experiment_id}/{run_id}/artifacts/model_docker"
-image_name = "model-mlflow"
-
-# Jalankan perintah build docker dari Python
-try:
-    subprocess.run([
-        "mlflow", "models", "build-docker",
-        "-m", model_uri,
-        "-n", image_name
-    ], check=True)
-except subprocess.CalledProcessError as e:
-    print(f"❌ Gagal membuild Docker image: {e}")
-    raise
-
-# Tambahkan ini di akhir get_latest_run.py
+# Cetak run_id agar bisa ditangkap oleh GitHub Actions
 print(f"run_id: {run_id}")
-
