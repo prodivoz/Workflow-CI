@@ -82,16 +82,14 @@ def main():
         model_path = "model.pkl"
         joblib.dump(model, model_path)
 
-        pyfunc_path = "model_pyfunc"
-        mlflow.pyfunc.save_model(
-            path=pyfunc_path,
-            python_model=SklearnWrapper(),
-            artifacts={"model_path": model_path},
-            input_example=X_test.iloc[:1],
-            signature=mlflow.models.infer_signature(X_test, y_pred)
-        )
+        mlflow.pyfunc.log_model(
+    artifact_path="model",
+    python_model=SklearnWrapper(),
+    artifacts={"model_path": model_path},
+    input_example=X_test.iloc[:1],
+    signature=mlflow.models.infer_signature(X_test, y_pred)
+)
 
-        mlflow.log_artifacts(pyfunc_path, artifact_path="model")
 
         print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}")
