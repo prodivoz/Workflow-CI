@@ -8,13 +8,12 @@ on:
 jobs:
   train-model:
     runs-on: ubuntu-latest
-    
-env:
-  MLFLOW_TRACKING_USERNAME: prodivoz
-  MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-  MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
 
-      
+    env:
+      MLFLOW_TRACKING_USERNAME: prodivoz
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -32,7 +31,7 @@ env:
     - name: Run MLflow Project
       run: |
         cd MLProject
-        mlflow run . --env-manager=local  --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
+        mlflow run . --env-manager=local --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
 
     - name: Get latest MLflow run_id
       run: |
@@ -41,7 +40,6 @@ env:
         import mlflow
         import os
         
-        # Set tracking URI dari environment (misal dari DagsHub)
         mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
         
         experiment_name = "Model ML Eksperimen"
@@ -82,7 +80,6 @@ env:
         name: mlflow-artifact
         path: ./MLProject/model_artifacts/mlflow-artifacts
 
-
     - name: Build Docker Model
       run: |
         echo "🐳 Building Docker image for the model"
@@ -104,4 +101,4 @@ env:
     - name: Push Docker Image
       run: |
         echo "📤 Pushing Docker image to Docker Hub"
-        docker zikri15/prodivoz_model-mlflow:latest
+        docker push zikri15/prodivoz_model-mlflow:latest
