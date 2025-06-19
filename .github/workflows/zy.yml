@@ -76,8 +76,8 @@ jobs:
             sys.exit(1)
         EOF
 
-        - name: Download model artifacts via Python Script
-          run: |
+            - name: Download model artifacts via Python Script
+              run: |
         echo "📥 Start Downloading model artifact from run: ${{ env.RUN_ID }}"
         python <<EOF
         import mlflow
@@ -99,7 +99,7 @@ jobs:
         try:
             mlflow.artifacts.download_artifacts(
                 run_id=run_id,
-                artifact_path="model",  # pastikan ini cocok dengan artifact_path waktu log_model
+                artifact_path="model",
                 dst_path=artifact_destination
             )
             print(f"✅ Artifacts downloaded successfully to {artifact_destination}")
@@ -107,6 +107,7 @@ jobs:
             print(f"❌ An error occurred during artifact download: {e}")
             sys.exit(1)
         EOF
+
 
         
     - name: Upload model to GitHub artifact
