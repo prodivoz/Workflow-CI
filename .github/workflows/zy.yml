@@ -19,7 +19,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install mlflow
+          pip install mlflow pandas scikit-learn matplotlib joblib
+
           echo "MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_TRACKING_USERNAME }}" >> $GITHUB_ENV
           echo "MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_TRACKING_PASSWORD }}" >> $GITHUB_ENV
 
@@ -28,6 +29,8 @@ jobs:
         run: |
           cd MLProject
           export MLFLOW_TRACKING_URI=./mlruns
+
+          echo "🚀 Running MLflow project..."
           mlflow run . --env-manager=local 2>&1 | tee output.log
 
           RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
@@ -38,20 +41,17 @@ jobs:
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Validated RUN_ID: $RUN_ID"
 
-      - name: List artifacts before upload
-        run: |
-          echo "📂 Listing artifacts for run ID: ${{ env.RUN_ID }}"
-          find MLProject/mlruns -type f | grep ${{ env.RUN_ID }} || echo "⚠️ Artifacts not found!"
-          find MLProject/mlruns -type f | grep model || echo "⚠️ Model files not found!"
+          echo "📁 Debug: Listing all files under ./mlruns"
+          find ./mlruns
 
-      - name: Upload ML artifacts
+      - name: Upload MLflow Model Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mlruns-artifacts
-          path: MLProject/mlruns/**/${{ env.RUN_ID }}/artifacts
+          name: mlruns-model
+          path: MLProject/mlruns/**/artifacts/model
           if-no-files-found: warn
 
-      - name: Build Docker Model
+      - name: Build Docker Image
         run: |
           echo "Using RUN_ID: ${{ env.RUN_ID }}"
           export MLFLOW_TRACKING_URI=./MLProject/mlruns
