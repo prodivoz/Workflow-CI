@@ -42,11 +42,11 @@ jobs:
           echo "📂 Contents of artifact folder:"
           ls -R MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts || echo "⚠️ Artifacts folder not found!"
 
-      - name: Upload ML artifact
+      - name: Upload all artifacts (debug)
         uses: actions/upload-artifact@v4
         with:
-          name: model
-          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model
+          name: mlruns-artifacts
+          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts
           if-no-files-found: warn
 
       - name: Build Docker Model
