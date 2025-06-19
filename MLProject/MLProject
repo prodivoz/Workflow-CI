@@ -1,5 +1,5 @@
-name: modelling-project
-conda_env: conda.yaml
+name: games-price-classifier
+
 entry_points:
   main:
     parameters: {}
