@@ -76,42 +76,13 @@ jobs:
             sys.exit(1)
         EOF
 
-    - name: Download model artifacts via Python Script
+    - name: Pull model artifact using DVC
       run: |
-        echo "📥 Downloading model artifact from run: ${{ env.RUN_ID }}"
-        python <<EOF
-        import mlflow
-        import os
-        import sys
-        import shutil
+        cd ${{ env.WORKING_DIRECTORY }}
+        git config --global user.name "prodivoz"
+        git config --global user.email "prodivoz@github.com"
+        dvc pull model
         
-        run_id = os.environ.get("RUN_ID")
-        if not run_id:
-            print("❌ RUN_ID not set.")
-            sys.exit(1)
-        
-        # This is the destination directory for the downloaded model
-        artifact_destination = os.path.join("${{ env.WORKING_DIRECTORY }}", "model_artifacts", "sklearn_model")
-        
-        # Ensure the destination directory is clean before download
-        if os.path.exists(artifact_destination):
-            shutil.rmtree(artifact_destination)
-        os.makedirs(artifact_destination, exist_ok=True)
-        
-        try:
-            # Use the programmatic API which is more direct
-            mlflow.artifacts.download_artifacts(
-                run_id=run_id,
-                artifact_path="model",  # The name of the artifact logged in the training script
-                dst_path=artifact_destination
-            )
-            print(f"✅ Artifacts downloaded successfully to {artifact_destination}")
-        
-        except Exception as e:
-            print(f"An error occurred during artifact download: {e}")
-            sys.exit(1)
-        EOF
-
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
       with:
