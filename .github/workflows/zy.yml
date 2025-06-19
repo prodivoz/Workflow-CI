@@ -63,16 +63,23 @@ jobs:
             f.write(f"RUN_ID={run_id}\n")
         EOF
 
-    - name: Download model artifacts
-      run: |
-        echo "📥 Downloading model artifact for run: $RUN_ID"
-        mlflow artifacts download \
-          --run-id $RUN_ID \
-          --artifact-path model \
-          -d ./MLProject/model_artifacts/tmp_download
-        mkdir -p ./MLProject/model_artifacts
-        mv ./MLProject/model_artifacts/tmp_download/model ./MLProject/model_artifacts/sklearn_model
-        rm -rf ./MLProject/model_artifacts/tmp_download
+        - name: Download model artifacts (manual)
+        run: |
+        echo "📥 Downloading model artifact from run: $RUN_ID"
+        python <<EOF
+        import mlflow
+        import os
+
+        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+
+        client = mlflow.tracking.MlflowClient()
+        local_path = client.download_artifacts(run_id=os.environ["RUN_ID"], path="model")
+
+        os.makedirs("./MLProject/model_artifacts", exist_ok=True)
+        import shutil
+        shutil.copytree(local_path, "./MLProject/model_artifacts/sklearn_model", dirs_exist_ok=True)
+        EOF
+
     
     - name: Upload to GitHub artifact
       uses: actions/upload-artifact@v4
