@@ -15,6 +15,8 @@ import joblib
 mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
 mlflow_username     = os.getenv("MLFLOW_TRACKING_USERNAME")
 mlflow_password     = os.getenv("MLFLOW_TRACKING_PASSWORD")
+mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+
 
 os.environ["MLFLOW_TRACKING_USERNAME"] = mlflow_username
 os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
