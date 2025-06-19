@@ -75,15 +75,29 @@ jobs:
             sys.exit(1)
         EOF
 
-    - name: Download model artifacts
-      run: |
-        echo "📥 Downloading model artifact for run: $RUN_ID"
-        mlflow artifacts download \
-          --run-id $RUN_ID \
-          --artifact-path model \
-          -d ./downloaded_artifacts
-        mkdir -p model
-        mv ./downloaded_artifacts/model ./model/sklearn_model
+     - name: Download model artifacts
+ 
+  env:
+    MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
+    MLFLOW_TRACKING_USERNAME: <prodivoz>
+    MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }} 
+  run: |
+    echo "📥 Downloading model artifact for run: ${{ env.RUN_ID }}" 
+    
+    
+    pip install dagshub
+    
+    # Perintah download artefak Anda
+    mlflow artifacts download \
+      --run-id ${{ env.RUN_ID }} \
+      --artifact-path model \
+      -d ./downloaded_artifacts
+      
+    echo "✅ Artifacts downloaded successfully."
+    
+    # Pindahkan file ke lokasi yang diinginkan
+    mkdir -p model
+    mv ./downloaded_artifacts/model/* ./model/
 
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
