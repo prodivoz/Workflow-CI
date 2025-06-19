@@ -50,8 +50,8 @@ jobs:
     - name: Build Docker Image from MLflow Model
       run: |
         cd MLProject
-        EXP_ID=$(mlflow experiments list | grep "Model ML Eksperimen" | awk '{print $1}')
-        MODEL_URI=mlruns/$EXP_ID/${{ steps.read_run.outputs.run_id }}/artifacts/model_docker
+        RUN_ID=${{ steps.read_run.outputs.run_id }}
+        MODEL_URI=mlruns/0/$RUN_ID/artifacts/model_docker
         echo "Model URI: $MODEL_URI"
         mlflow models build-docker -m $MODEL_URI -n model-mlflow
 
