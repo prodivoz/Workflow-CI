@@ -9,10 +9,11 @@ jobs:
   train-model:
     runs-on: ubuntu-latest
     
-    env:
-      MLFLOW_TRACKING_USERNAME: prodivoz
-      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-      MLFLOW_TRACKING_URI     : https://dagshub.com/prodivoz/Workflow-CI.mlflow
+env:
+  MLFLOW_TRACKING_USERNAME: prodivoz
+  MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+  MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
+
       
     steps:
     - name: Checkout repository
