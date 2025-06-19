@@ -16,5 +16,6 @@ if runs.empty:
     raise ValueError("Tidak ada run ditemukan di experiment ini.")
 run_id = runs.iloc[0]["run_id"]
 
-# Cetak run_id agar bisa ditangkap oleh GitHub Actions
+# Cetak output untuk GitHub Actions
+print(f"experiment_id: {experiment_id}")
 print(f"run_id: {run_id}")
