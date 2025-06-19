@@ -39,8 +39,9 @@ jobs:
       - name: Upload ML artifact
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts
-          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts
+          name: model
+          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model
+          if-no-files-found: warn
 
       - name: Build Docker Model
         run: |
