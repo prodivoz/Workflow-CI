@@ -12,6 +12,17 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 import joblib
 
+mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+mlflow_username     = os.getenv("MLFLOW_TRACKING_USERNAME")
+mlflow_password     = os.getenv("MLFLOW_TRACKING_PASSWORD")
+
+os.environ["MLFLOW_TRACKING_USERNAME"] = mlflow_username
+os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
+
+mlflow.set_tracking_uri(mlflow_tracking_uri)
+mlflow.set_experiment("Model ML Eksperimen")
+mlflow.sklearn.autolog()
+
 def main():
     # Load data
     df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
