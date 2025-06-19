@@ -12,35 +12,27 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 import joblib
 
+# Set up MLflow tracking
 mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
 mlflow_username     = os.getenv("MLFLOW_TRACKING_USERNAME")
 mlflow_password     = os.getenv("MLFLOW_TRACKING_PASSWORD")
-mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-
-
 os.environ["MLFLOW_TRACKING_USERNAME"] = mlflow_username
 os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
-
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 mlflow.set_experiment("Model ML Eksperimen")
 mlflow.sklearn.autolog()
 
 def main():
-    # Load data
     df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
-
-    # Buat label klasifikasi
     df['price_class'] = pd.qcut(df['price'], q=3, labels=['low', 'medium', 'high'])
 
     X = df.drop(columns=['price', 'price_class'])
     y = df['price_class']
 
-    # Split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
 
-    # Encode fitur kategorikal
     cat_cols = X_train.select_dtypes(include='object').columns
     num_cols = X_train.select_dtypes(exclude='object').columns
 
@@ -52,18 +44,13 @@ def main():
     X_train_cat = pd.DataFrame(X_train_encoded, columns=encoded_feature_names, index=X_train.index)
     X_test_cat = pd.DataFrame(X_test_encoded, columns=encoded_feature_names, index=X_test.index)
 
-    # Gabung semua kolom
     X_train = pd.concat([X_train[num_cols], X_train_cat], axis=1)
     X_test = pd.concat([X_test[num_cols], X_test_cat], axis=1)
 
-    # Samakan kolom
     missing_cols = set(X_train.columns) - set(X_test.columns)
     for col in missing_cols:
         X_test[col] = 0
     X_test = X_test[X_train.columns]
-
-    # Tentukan experiment
-    mlflow.set_experiment("Model ML Eksperimen")
 
     class SklearnWrapper(mlflow.pyfunc.PythonModel):
         def load_context(self, context):
@@ -106,13 +93,17 @@ def main():
         model_path = "model.pkl"
         joblib.dump(model, model_path)
 
-        mlflow.pyfunc.log_model(
-            artifact_path="model",
+        # ✅ FIX: Save locally, then log manually
+        pyfunc_path = "model_pyfunc"
+        mlflow.pyfunc.save_model(
+            path=pyfunc_path,
             python_model=SklearnWrapper(),
             artifacts={"model_path": model_path},
             input_example=X_test.iloc[:1],
             signature=mlflow.models.infer_signature(X_test, y_pred)
         )
+
+        mlflow.log_artifacts(pyfunc_path, artifact_path="model")
 
         print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}")
