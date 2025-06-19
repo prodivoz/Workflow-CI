@@ -23,26 +23,27 @@ class SklearnWrapper(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
         self.model = joblib.load(context.artifacts["model_path"])
 
-    def predict(self, context, model_input):
+    def predict(self, context, model_input: pd.DataFrame) -> np.ndarray:
         return self.model.predict(model_input)
 
 # ========== Training Function ==========
 def train_and_log():
     print("📥 Loading data...")
     df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
-    df['price_class'] = pd.qcut(df['price'], q=3, labels=['low', 'medium', 'high'])
+    df["price_class"] = pd.qcut(df["price"], q=3, labels=["low", "medium", "high"])
 
-    X = df.drop(columns=['price', 'price_class'])
-    y = df['price_class']
+    X = df.drop(columns=["price", "price_class"])
+    y = df["price_class"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
 
-    cat_cols = X_train.select_dtypes(include='object').columns
-    num_cols = X_train.select_dtypes(exclude='object').columns
+    # Preprocessing
+    cat_cols = X_train.select_dtypes(include="object").columns
+    num_cols = X_train.select_dtypes(exclude="object").columns
 
-    encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
     X_train_cat = pd.DataFrame(
         encoder.fit_transform(X_train[cat_cols]),
         columns=encoder.get_feature_names_out(cat_cols),
@@ -62,55 +63,64 @@ def train_and_log():
         X_test[col] = 0
     X_test = X_test[X_train.columns]
 
-    with mlflow.start_run() as run:
-        print("🚀 Starting training...")
-        model = RandomForestClassifier(n_estimators=150, max_depth=10, random_state=42)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+    # === Run must already exist if using mlflow run ===
+    run = mlflow.active_run()
+    if run is None:
+        run = mlflow.start_run()
 
-        acc = accuracy_score(y_test, y_pred)
-        f1_macro = f1_score(y_test, y_pred, average="macro")
-        f1_weighted = f1_score(y_test, y_pred, average="weighted")
-        cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
+    print(f"🚀 Active MLflow Run ID: {run.info.run_id}")
 
-        mlflow.log_params(model.get_params())
-        mlflow.log_metrics({
-            "accuracy": acc,
-            "f1_macro": f1_macro,
-            "f1_weighted": f1_weighted
-        })
+    model = RandomForestClassifier(n_estimators=150, max_depth=10, random_state=42)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-        # === Save and log confusion matrix ===
-        os.makedirs("figures", exist_ok=True)
-        fig_path = "figures/confusion_matrix.png"
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['low', 'medium', 'high'])
-        disp.plot(cmap='Blues')
-        plt.title("Confusion Matrix")
-        plt.savefig(fig_path)
-        mlflow.log_artifact(fig_path)
+    acc = accuracy_score(y_test, y_pred)
+    f1_macro = f1_score(y_test, y_pred, average="macro")
+    f1_weighted = f1_score(y_test, y_pred, average="weighted")
+    cm = confusion_matrix(y_test, y_pred, labels=["low", "medium", "high"])
 
-        # === Save model to file ===
-        model_path = "model.pkl"
-        joblib.dump(model, model_path)
-        mlflow.log_artifact(model_path)  # <-- ensure it gets logged even outside pyfunc
+    mlflow.log_params(model.get_params())
+    mlflow.log_metrics({
+        "accuracy": acc,
+        "f1_macro": f1_macro,
+        "f1_weighted": f1_weighted
+    })
 
-        # === Log as pyfunc model ===
-        print("📁 Current directory content:")
-        os.system("ls -R .")
+    # === Save confusion matrix ===
+    os.makedirs("figures", exist_ok=True)
+    fig_path = "figures/confusion_matrix.png"
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["low", "medium", "high"])
+    disp.plot(cmap="Blues")
+    plt.title("Confusion Matrix")
+    plt.savefig(fig_path)
+    mlflow.log_artifact(fig_path)
 
-        mlflow.pyfunc.log_model(
-            artifact_path="model",
-            python_model=SklearnWrapper(),
-            artifacts={"model_path": model_path},
-            input_example=X_test.iloc[:1],
-            signature=mlflow.models.infer_signature(X_test, y_pred)
-        )
+    # === Save model to file ===
+    model_path = "model.pkl"
+    joblib.dump(model, model_path)
+    mlflow.log_artifact(model_path)
 
-        print("✅ Run ID:", run.info.run_id)
-        print(f"✅ Accuracy: {acc:.2f}, F1_macro: {f1_macro:.2f}")
-        print("📁 Model artifact URI:", mlflow.get_artifact_uri("model"))
-        print("📂 Logged files in model artifact path:")
-os.system("ls -R " + mlflow.get_artifact_uri("model").replace("file://", ""))
+    # === Log as PyFunc Model ===
+    mlflow.pyfunc.log_model(
+        artifact_path="model",
+        python_model=SklearnWrapper(),
+        artifacts={"model_path": model_path},
+        input_example=X_test.iloc[:1],
+        signature=mlflow.models.infer_signature(X_test, y_pred)
+    )
+
+    print("✅ Metrics logged")
+    print("📦 Model saved to:", mlflow.get_artifact_uri("model"))
+
+    # === Debug: List files ===
+    artifact_uri = mlflow.get_artifact_uri("model")
+    if artifact_uri.startswith("file://"):
+        print("📂 Contents of model artifact folder:")
+        os.system("ls -R " + artifact_uri.replace("file://", ""))
+
+    # Only end run if started manually
+    if mlflow.active_run().info.run_id != run.info.run_id:
+        mlflow.end_run()
 
 
 if __name__ == "__main__":
