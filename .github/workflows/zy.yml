@@ -34,7 +34,7 @@ jobs:
           mlflow run . --env-manager=local --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
 
       - name: Get latest MLflow run_id
-        run: |
+        run: python get_run_id.py
           echo "Getting latest run ID..."
           cat <<EOF > get_run_id.py
           import mlflow
