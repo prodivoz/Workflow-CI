@@ -42,42 +42,42 @@ jobs:
         echo "Getting latest run ID..."
         # This inline script must have no indentation relative to the EOF marker
         python <<EOF
-import mlflow
-import os
-import sys
-
-# Set tracking URI from environment
-mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-experiment_name = "Model ML Eksperimen"
-client = mlflow.tracking.MlflowClient()
-
-try:
-    experiment = client.get_experiment_by_name(experiment_name)
-    if experiment is None:
-        print(f"❌ Experiment '{experiment_name}' not found.")
-        sys.exit(1)
-
-    # Search for the latest run
-    runs = client.search_runs(
-        experiment_ids=[experiment.experiment_id],
-        order_by=["start_time DESC"],
-        max_results=1
-    )
-    if not runs:
-        print("❌ No MLflow runs found in the experiment.")
-        sys.exit(1)
-
-    run_id = runs[0].info.run_id
-    print(f"✅ Latest run ID: {run_id}")
-
-    # Export RUN_ID for subsequent steps
-    with open(os.environ["GITHUB_ENV"], "a") as f:
-        f.write(f"RUN_ID={run_id}\n")
-
-except Exception as e:
-    print(f"An error occurred: {e}")
-    sys.exit(1)
-EOF
+        import mlflow
+        import os
+        import sys
+        
+        # Set tracking URI from environment
+        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+        experiment_name = "Model ML Eksperimen"
+        client = mlflow.tracking.MlflowClient()
+        
+        try:
+            experiment = client.get_experiment_by_name(experiment_name)
+            if experiment is None:
+                print(f"❌ Experiment '{experiment_name}' not found.")
+                sys.exit(1)
+        
+            # Search for the latest run
+            runs = client.search_runs(
+                experiment_ids=[experiment.experiment_id],
+                order_by=["start_time DESC"],
+                max_results=1
+            )
+            if not runs:
+                print("❌ No MLflow runs found in the experiment.")
+                sys.exit(1)
+        
+            run_id = runs[0].info.run_id
+            print(f"✅ Latest run ID: {run_id}")
+        
+            # Export RUN_ID for subsequent steps
+            with open(os.environ["GITHUB_ENV"], "a") as f:
+                f.write(f"RUN_ID={run_id}\n")
+        
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            sys.exit(1)
+        EOF
 
     - name: Download model artifacts from MLflow
       run: |
