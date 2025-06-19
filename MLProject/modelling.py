@@ -109,12 +109,12 @@ mlflow.pyfunc.save_model(
 
 mlflow.log_artifacts(pyfunc_path, artifact_path="model")
 
-
-        # ✅ Display useful info
+        print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}")
         print(f"✅ F1 Macro: {f1_macro:.2f}")
         print(f"✅ F1 Weighted: {f1_weighted:.2f}")
         print("✅ Model logged at:", mlflow.get_artifact_uri("model"))
+
 
 if __name__ == "__main__":
     main()
