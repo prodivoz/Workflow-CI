@@ -1,0 +1,1 @@
+https://hub.docker.com/repository/docker/anandanp777/hiring_prediction_model/general
