@@ -96,7 +96,7 @@ with mlflow.start_run() as run:
     model_path = "model.pkl"
     joblib.dump(model, model_path)
 
-    # ✅ Log model PyFunc agar bisa dibuild ke Docker
+    # Log model untuk PyFunc (Docker/REST-ready)
     mlflow.pyfunc.log_model(
         artifact_path="model_docker",
         python_model=SklearnWrapper(),
