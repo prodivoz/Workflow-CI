@@ -1,9 +1,10 @@
-name: CI
+name: zy
 on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,25 +29,26 @@ jobs:
           cd MLProject
           export MLFLOW_TRACKING_URI=./mlruns
           mlflow run . --env-manager=local 2>&1 | tee output.log
-      
+
           RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
           fi
-      
+
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Validated RUN_ID: $RUN_ID"
 
       - name: List artifacts before upload
         run: |
-          echo "📂 Contents of artifact folder:"
-          ls -R MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts || echo "⚠️ Artifacts folder not found!"
+          echo "📂 Listing artifacts for run ID: ${{ env.RUN_ID }}"
+          find MLProject/mlruns -type f | grep ${{ env.RUN_ID }} || echo "⚠️ Artifacts not found!"
+          find MLProject/mlruns -type f | grep model || echo "⚠️ Model files not found!"
 
-      - name: Upload all artifacts (debug)
+      - name: Upload ML artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlruns-artifacts
-          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts
+          path: MLProject/mlruns/**/${{ env.RUN_ID }}/artifacts
           if-no-files-found: warn
 
       - name: Build Docker Model
