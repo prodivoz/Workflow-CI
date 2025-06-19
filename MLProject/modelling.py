@@ -20,7 +20,7 @@ os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
 
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 mlflow.set_experiment("Model ML Eksperimen")
-mlflow.sklearn.autolog()
+#mlflow.sklearn.autolog()
 
 class SklearnWrapper(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
