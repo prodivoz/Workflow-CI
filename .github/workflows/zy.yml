@@ -32,10 +32,20 @@ jobs:
           pip install --upgrade pip
           pip install -r MLProject/requirements.txt
 
-      - name: 🚀 Run mlflow project
+      - name: Run MLflow Project and Capture RUN_ID
+        id: run_mlflow
         run: |
           cd MLProject
-          mlflow run . --env-manager=local --verbose
+          mlflow run . --env-manager=local 2>&1 | tee output.log
+          
+          RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
+          
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
+          fi
+          
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          echo "Validated RUN_ID: $RUN_ID"
 
       - name: 🧾 Get latest MLflow run_id
         run: |
