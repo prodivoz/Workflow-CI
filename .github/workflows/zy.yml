@@ -30,17 +30,15 @@ jobs:
           --experiment-name "Model ML Eksperimen" \
           --run-name "model_ml_eksperimen"
 
-    - name: Get latest run ID and experiment ID
+    - name: Get latest run ID
       run: |
         cd MLProject
         python get_latest_run.py > latest_run.txt
 
-    - name: Read latest run info
+    - name: Read latest run ID
       id: read_run
       run: |
-        EXP_ID=$(grep -oP '(?<=experiment_id: )\w+' MLProject/latest_run.txt)
         RUN_ID=$(grep -oP '(?<=run_id: )\w+' MLProject/latest_run.txt)
-        echo "experiment_id=$EXP_ID" >> $GITHUB_OUTPUT
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
     - name: Login to DockerHub
@@ -52,9 +50,9 @@ jobs:
     - name: Build Docker Image from MLflow Model
       run: |
         cd MLProject
-        MODEL_URI=mlruns/${{ steps.read_run.outputs.experiment_id }}/${{ steps.read_run.outputs.run_id }}/artifacts/model_docker
+        EXP_ID=$(mlflow experiments list | grep "Model ML Eksperimen" | awk '{print $1}')
+        MODEL_URI=mlruns/$EXP_ID/${{ steps.read_run.outputs.run_id }}/artifacts/model_docker
         echo "Model URI: $MODEL_URI"
-        mlflow artifacts list -r $MODEL_URI || true
         mlflow models build-docker -m $MODEL_URI -n model-mlflow
 
     - name: Push Docker Image
