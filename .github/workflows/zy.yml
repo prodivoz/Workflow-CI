@@ -24,21 +24,21 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 🧪 Check Env
-        run: |
-          echo "MLFLOW_TRACKING_URI: $MLFLOW_TRACKING_URI"
-
       - name: 📦 Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r MLProject/requirements.txt
 
       - name: 🚀 Run MLflow Project and Capture RUN_ID
-        id: run
+        id: mlflow_run
         run: |
           cd MLProject
           echo ">>> Running MLflow project"
-          mlflow run . --env-manager=local --no-conda -e main --verbose
+          RUN_OUTPUT=$(mlflow run . --env-manager=local --verbose 2>&1)
+          echo "$RUN_OUTPUT"
+          RUN_ID=$(echo "$RUN_OUTPUT" | grep -oE 'Run ID: [a-f0-9]+' | awk '{print $3}' | tail -1)
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          echo "Captured RUN_ID: $RUN_ID"
 
       - name: 📤 Download ML artifact
         run: |
