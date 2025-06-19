@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import os
 
 # Load dataset
-df = pd.read_csv("games_preprocessed.csv")
+df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
 
 # Buat kolom klasifikasi target (3 kelas)
 df['price_class'] = pd.qcut(df['price'], q=3, labels=['low', 'medium', 'high'])
