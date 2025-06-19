@@ -1,11 +1,9 @@
 name: zy
-
 on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,8 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install mlflow pandas scikit-learn matplotlib joblib
-
+          pip install mlflow
           echo "MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_TRACKING_USERNAME }}" >> $GITHUB_ENV
           echo "MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_TRACKING_PASSWORD }}" >> $GITHUB_ENV
 
@@ -30,33 +27,27 @@ jobs:
         run: |
           cd MLProject
           export MLFLOW_TRACKING_URI=./mlruns
-
-          echo "🚀 Running MLflow project..."
           mlflow run . --env-manager=local 2>&1 | tee output.log
-
-          RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
+      
+          RUN_ID=$(grep "MLFLOW_RUN_ID=" output.log | cut -d'=' -f2)
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
+          fi
+      
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Validated RUN_ID: $RUN_ID"
 
-          echo "📁 Debug: Listing run output"
-          find ./mlruns
 
-      - name: Upload MLflow Model Artifacts
+      - name: Upload ML artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mlruns-model
-          path: MLProject/mlruns/**/artifacts/model
-          if-no-files-found: error
+          name: model
+          path: MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model
+          if-no-files-found: warn
 
-      - name: Download uploaded model artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mlruns-model
-          path: ./downloaded_model
-
-      - name: Build Docker Image
+      - name: Build Docker Model
         run: |
-          echo "🐳 Building Docker image using run ID: ${{ env.RUN_ID }}"
+          echo "Using RUN_ID: ${{ env.RUN_ID }}"
           export MLFLOW_TRACKING_URI=./MLProject/mlruns
           DOCKER_BUILDKIT=1 docker build -t zikri15/prodivoz_model-mlflow MLProject
 
