@@ -1,1 +1,1 @@
-https://hub.docker.com/repository/docker/anandanp777/hiring_prediction_model/general
+https://hub.docker.com/repository/docker/zikri15/prodivoz_model-mlflow/general
