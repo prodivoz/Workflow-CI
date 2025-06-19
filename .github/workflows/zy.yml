@@ -48,14 +48,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: mlruns-model
-          path: ./downloaded_model  # tujuan simpan
+          path: ./downloaded_model  
 
 
       - name: Upload MLflow Model Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mlruns-model
-          path: MLProject/mlruns/**/artifacts/model
+          path: MLProject/mlruns/**/artifacts/
           if-no-files-found: warn
 
 
