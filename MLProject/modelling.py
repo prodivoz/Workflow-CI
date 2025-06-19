@@ -30,18 +30,14 @@ class SklearnWrapper(mlflow.pyfunc.PythonModel):
         return self.model.predict(model_input)
 
 def main():
-    # Load data
     df = pd.read_csv("games_preprocessed/games_preprocessed.csv")
     df['price_class'] = pd.qcut(df['price'], q=3, labels=['low', 'medium', 'high'])
 
     X = df.drop(columns=['price', 'price_class'])
     y = df['price_class']
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, stratify=y, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-    # Preprocessing
     cat_cols = X_train.select_dtypes(include='object').columns
     num_cols = X_train.select_dtypes(exclude='object').columns
 
@@ -56,19 +52,13 @@ def main():
     X_train = pd.concat([X_train[num_cols], X_train_cat], axis=1)
     X_test = pd.concat([X_test[num_cols], X_test_cat], axis=1)
 
-    # Ensure consistent features
     missing_cols = set(X_train.columns) - set(X_test.columns)
     for col in missing_cols:
         X_test[col] = 0
     X_test = X_test[X_train.columns]
 
     with mlflow.start_run() as run:
-        params = {
-            "n_estimators": 150,
-            "max_depth": 10,
-            "random_state": 42
-        }
-
+        params = {"n_estimators": 150, "max_depth": 10, "random_state": 42}
         model = RandomForestClassifier(**params)
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
@@ -78,13 +68,8 @@ def main():
         f1_weighted = f1_score(y_test, y_pred, average='weighted')
         cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
 
-        # Log metrics & confusion matrix
         mlflow.log_params(params)
-        mlflow.log_metrics({
-            "accuracy": acc,
-            "f1_macro": f1_macro,
-            "f1_weighted": f1_weighted
-        })
+        mlflow.log_metrics({"accuracy": acc, "f1_macro": f1_macro, "f1_weighted": f1_weighted})
 
         os.makedirs("figures", exist_ok=True)
         fig_path = "figures/confusion_matrix_rf.png"
@@ -94,27 +79,25 @@ def main():
         plt.savefig(fig_path)
         mlflow.log_artifact(fig_path)
 
-        # Save model locally for wrapping
         model_path = "model.pkl"
         joblib.dump(model, model_path)
 
         pyfunc_path = "model_pyfunc"
-mlflow.pyfunc.save_model(
-    path=pyfunc_path,
-    python_model=SklearnWrapper(),
-    artifacts={"model_path": model_path},
-    input_example=X_test.iloc[:1],
-    signature=mlflow.models.infer_signature(X_test, y_pred)
-)
+        mlflow.pyfunc.save_model(
+            path=pyfunc_path,
+            python_model=SklearnWrapper(),
+            artifacts={"model_path": model_path},
+            input_example=X_test.iloc[:1],
+            signature=mlflow.models.infer_signature(X_test, y_pred)
+        )
 
-mlflow.log_artifacts(pyfunc_path, artifact_path="model")
+        mlflow.log_artifacts(pyfunc_path, artifact_path="model")
 
         print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}")
         print(f"✅ F1 Macro: {f1_macro:.2f}")
         print(f"✅ F1 Weighted: {f1_weighted:.2f}")
         print("✅ Model logged at:", mlflow.get_artifact_uri("model"))
-
 
 if __name__ == "__main__":
     main()
