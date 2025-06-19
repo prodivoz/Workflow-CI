@@ -3,7 +3,80 @@ on: [push]
 
 jobs:
   build:
+    runs-on: ubuntu-latestaname: zy
+
+on: [push]
+
+jobs:
+  build:
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Env
+        run: pip list
+
+      - name: Install dependencies
+        run: |
+          pip install mlflow pandas scikit-learn matplotlib joblib
+
+          echo "MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_TRACKING_USERNAME }}" >> $GITHUB_ENV
+          echo "MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_TRACKING_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Run MLflow Project and Capture RUN_ID
+        id: run_mlflow
+        run: |
+          cd MLProject
+          export MLFLOW_TRACKING_URI=./mlruns
+
+          echo "🚀 Running MLflow project..."
+          mlflow run . --env-manager=local 2>&1 | tee output.log
+
+          RUN_ID=$(grep -oE "[a-f0-9]{32}" output.log | head -n1)
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          echo "Validated RUN_ID: $RUN_ID"
+
+          echo "📁 Debug: Listing run output"
+          find ./mlruns
+
+      - name: Upload MLflow Model Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns-model
+          path: MLProject/mlruns/**/artifacts/model
+          if-no-files-found: error
+
+      - name: Download uploaded model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mlruns-model
+          path: ./downloaded_model
+
+      - name: Build Docker Image
+        run: |
+          echo "🐳 Building Docker image using run ID: ${{ env.RUN_ID }}"
+          export MLFLOW_TRACKING_URI=./MLProject/mlruns
+          DOCKER_BUILDKIT=1 docker build -t zikri15/prodivoz_model-mlflow MLProject
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Tag Docker Image
+        run: docker tag zikri15/prodivoz_model-mlflow zikri15/prodivoz_model-mlflow:latest
+
+      - name: Push Docker Image
+        run: docker push zikri15/prodivoz_model-mlflow:latest
+
 
     steps:
       - name: Checkout code
