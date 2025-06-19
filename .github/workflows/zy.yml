@@ -38,12 +38,7 @@ jobs:
         run: |
           cd MLProject
           echo ">>> Running MLflow project"
-          RUN_OUTPUT=$(mlflow run . --env-manager=local 2>&1)
-          echo "$RUN_OUTPUT"
-
-          RUN_ID=$(echo "$RUN_OUTPUT" | grep -oE "Run ID: ([a-f0-9\-]+)" | awk '{print $3}' | tail -1)
-          echo "Captured RUN_ID: $RUN_ID"
-          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          mlflow run . --env-manager=local --no-conda -e main --verbose
 
       - name: 📤 Download ML artifact
         run: |
