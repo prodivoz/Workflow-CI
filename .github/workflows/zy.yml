@@ -1,51 +1,106 @@
-name: CI - Retrain & Deploy ML Model
+name: MLflow CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'MLProject/**'
-      - '.github/workflows/**'
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  retrain-and-deploy:
+  train-model:
     runs-on: ubuntu-latest
-
+    
+    env:
+      MLFLOW_TRACKING_USERNAME: prodivoz
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      MLFLOW_TRACKING_URI     : https://dagshub.com/prodivoz/Workflow-CI.mlflow
+      
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.12.7
+        python-version: '3.12.7'
 
-    - name: Install MLflow & dependencies
+    - name: Install dependencies
       run: |
-        pip install mlflow==2.19.0
-        pip install -r MLProject/requirements.txt || true  # jaga-jaga jika ada
+        python -m pip install --upgrade pip
+        pip install -r MLProject/requirements.txt
 
     - name: Run MLflow Project
       run: |
-        export MLFLOW_TRACKING_URI=https://dagshub.com/prodivoz/Workflow-CI
-        export MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_USERNAME }}
-        export MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_PASSWORD }}
         cd MLProject
-        mlflow run . --env-manager=local
+        mlflow run . --env-manager=local  --run-name model_ml_eksperimen --experiment-name "Model ML Eksperimen"
 
-    - name: Build Docker Image from MLflow Model
+    - name: Get latest MLflow run_id
       run: |
-        export MLFLOW_TRACKING_URI=https://dagshub.com/prodivoz/Workflow-CI
-        export MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_USERNAME }}
-        export MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_PASSWORD }}
-        mlflow models build-docker -m "models:/Modelling-dan-Tuning-Registry/latest" -n telco-churn
+        echo "Getting latest run ID..."
+        python <<EOF
+        import mlflow
+        import os
+        
+        # Set tracking URI dari environment (misal dari DagsHub)
+        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+        
+        experiment_name = "Model ML Eksperimen"
+        client = mlflow.tracking.MlflowClient()
+        experiment = client.get_experiment_by_name(experiment_name)
+        
+        if experiment is None:
+            print(f"❌ Experiment '{experiment_name}' not found.")
+            exit(1)
+        
+        runs = client.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"])
+        
+        if not runs:
+            print("❌ No MLflow runs found.")
+            exit(1)
+        
+        run_id = runs[0].info.run_id
+        print(f"✅ Latest run ID: {run_id}")
+        
+        with open(os.environ["GITHUB_ENV"], "a") as f:
+            f.write(f"RUN_ID={run_id}\n")
+        EOF
 
-    - name: Login to DockerHub
+    - name: Download model artifacts
       run: |
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        echo "📥 Downloading model artifact for run: $RUN_ID"
+        mlflow artifacts download \
+          --run-id $RUN_ID \
+          --artifact-path model \
+          -d ./MLProject/model_artifacts/tmp_download
+        mkdir -p ./MLProject/model_artifacts
+        mv ./MLProject/model_artifacts/tmp_download/model ./MLProject/model_artifacts/sklearn_model
+        rm -rf ./MLProject/model_artifacts/tmp_download
+    
+    - name: Upload to GitHub artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sklearn_model_artifact
+        path: ./MLProject/model_artifacts/sklearn_model
+
+
+    - name: Build Docker Model
+      run: |
+        echo "🐳 Building Docker image for the model"
+        mlflow models build-docker \
+          --model-uri ./MLProject/model_artifacts/model-mlflow\
+          --name zikri15/prodivoz_model-mlflow
+          
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Tag Docker Image
+      run: |
+        echo "🏷️ Tagging Docker image with :latest"
+        docker tag zikri15/prodivoz_model-mlflow:latest
 
     - name: Push Docker Image
       run: |
-        docker tag telco-churn:latest ${{ secrets.DOCKER_USERNAME }}/telco-churn:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/telco-churn:latest
+        echo "📤 Pushing Docker image to Docker Hub"
+        docker push zikri15/prodivoz_model-mlflow:latest
