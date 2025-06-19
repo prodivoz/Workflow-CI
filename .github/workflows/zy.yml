@@ -8,9 +8,8 @@ on:
 jobs:
   train-and-deploy:
     runs-on: ubuntu-latest
-    
+
     env:
-      # Define variables for easy management
       MLFLOW_TRACKING_USERNAME: prodivoz
       MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
       MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
@@ -45,17 +44,17 @@ jobs:
         import mlflow
         import os
         import sys
-        
+
         mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
         experiment_name = "Model ML Eksperimen"
         client = mlflow.tracking.MlflowClient()
-        
+
         try:
             experiment = client.get_experiment_by_name(experiment_name)
             if experiment is None:
                 print(f"❌ Experiment '{experiment_name}' not found.")
                 sys.exit(1)
-        
+
             runs = client.search_runs(
                 experiment_ids=[experiment.experiment_id],
                 order_by=["start_time DESC"],
@@ -64,20 +63,20 @@ jobs:
             if not runs:
                 print("❌ No MLflow runs found in the experiment.")
                 sys.exit(1)
-        
+
             run_id = runs[0].info.run_id
             print(f"✅ Latest run ID: {run_id}")
-        
+
             with open(os.environ["GITHUB_ENV"], "a") as f:
                 f.write(f"RUN_ID={run_id}\n")
-        
+
         except Exception as e:
             print(f"An error occurred: {e}")
             sys.exit(1)
         EOF
 
-            - name: Download model artifacts via Python Script
-              run: |
+    - name: Download model artifacts via Python Script
+      run: |
         echo "📥 Start Downloading model artifact from run: ${{ env.RUN_ID }}"
         python <<EOF
         import mlflow
@@ -108,8 +107,6 @@ jobs:
             sys.exit(1)
         EOF
 
-
-        
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
       with:
@@ -124,14 +121,12 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        # The MODEL_URI now points directly to the directory containing the MLmodel file
         MODEL_URI="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
-        
         echo "🐳 Building Docker image from URI: $MODEL_URI"
-        
+
         mlflow models build-docker \
           --model-uri "$MODEL_URI" \
           --name "${{ env.DOCKER_IMAGE_NAME }}"
-          
+
         echo "📤 Pushing Docker image to Docker Hub: ${{ env.DOCKER_IMAGE_NAME }}:latest"
         docker push "${{ env.DOCKER_IMAGE_NAME }}:latest"
