@@ -2,49 +2,47 @@ import pandas as pd
 import numpy as np
 import mlflow
 import mlflow.sklearn
-import mlflow.models
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.preprocessing import OneHotEncoder
 
-# Aktifkan autolog
 mlflow.autolog()
 
-# Lokasi file input
 INPUT_PATH = "games_preprocessed/games_preprocessed.csv"
 
 def load_data(path):
     df = pd.read_csv(path)
-    # Preprocessing label
     df["price_class"] = pd.qcut(df["price"], q=3, labels=["low", "medium", "high"])
-    df = df.drop(columns=["price"])  # Hapus kolom target lama
+    df = df.drop(columns=["price"])
     return df
 
-def split_data(df):
-    train_df, test_df = train_test_split(df, test_size=0.2, stratify=df["price_class"], random_state=42)
+def preprocess(df):
+    X = df.drop(columns=["price_class"])
+    y = df["price_class"]
 
-    train_dataset = mlflow.data.from_pandas(train_df, name="train")
-    test_dataset = mlflow.data.from_pandas(test_df, name="test")
+    cat_cols = X.select_dtypes(include="object").columns
+    num_cols = X.select_dtypes(exclude="object").columns
 
-    x_train = train_dataset.df.drop(columns=["price_class"])
-    y_train = train_dataset.df["price_class"]
+    encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    X_cat = pd.DataFrame(
+        encoder.fit_transform(X[cat_cols]),
+        columns=encoder.get_feature_names_out(cat_cols),
+        index=X.index
+    )
 
-    x_test = test_dataset.df.drop(columns=["price_class"])
-    y_test = test_dataset.df["price_class"]
-
-    return x_train, y_train, x_test, y_test
-
-def train_model(x_train, y_train):
-    model = GradientBoostingClassifier(random_state=42)
-    model.fit(x_train, y_train)
-    return model
+    X_final = pd.concat([X[num_cols], X_cat], axis=1)
+    return X_final, y
 
 if __name__ == "__main__":
     with mlflow.start_run() as run:
         df = load_data(INPUT_PATH)
-        x_train, y_train, x_test, y_test = split_data(df)
-        model = train_model(x_train, y_train)
+        X, y = preprocess(df)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, stratify=y, random_state=42
+        )
 
-        # Log model secara eksplisit (meskipun autolog akan otomatis juga)
+        model = GradientBoostingClassifier(random_state=42)
+        model.fit(X_train, y_train)
+
         mlflow.sklearn.log_model(model, "model")
-
         print(f"✅ MLFLOW_RUN_ID={run.info.run_id}")
