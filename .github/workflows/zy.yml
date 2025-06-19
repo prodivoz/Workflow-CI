@@ -78,7 +78,7 @@ jobs:
 
         - name: Download model artifacts via Python Script
           run: |
-        echo "📥 Downloading model artifact from run: ${{ env.RUN_ID }}"
+        echo "📥 Start Downloading model artifact from run: ${{ env.RUN_ID }}"
         python <<EOF
         import mlflow
         import os
