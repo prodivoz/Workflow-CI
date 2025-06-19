@@ -111,7 +111,6 @@ mlflow.log_artifacts(pyfunc_path, artifact_path="model")
 
 
         # ✅ Display useful info
-        print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}")
         print(f"✅ F1 Macro: {f1_macro:.2f}")
         print(f"✅ F1 Weighted: {f1_weighted:.2f}")
