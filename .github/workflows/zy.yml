@@ -1,43 +1,5 @@
-name: MLflow CI
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-jobs:
-  train-and-deploy:
-    runs-on: ubuntu-latest
-
-    env:
-      MLFLOW_TRACKING_USERNAME: prodivoz
-      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-      MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
-      DOCKER_IMAGE_NAME: zikri15/prodivoz_model-mlflow
-      PYTHON_VERSION: '3.12'
-      WORKING_DIRECTORY: ./MLProject
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ${{ env.WORKING_DIRECTORY }}/requirements.txt
-        pip install dvc[s3]
-
-    - name: Run MLflow Project to train model
-      run: |
-        cd ${{ env.WORKING_DIRECTORY }}
-        mlflow run . --env-manager=local --run-name "Training from CI" --experiment-name "Model ML Eksperimen"
-
-    - name: Get latest MLflow run_id
+- name: Get latest MLflow run_id
+      id: get_run_id
       run: |
         echo "Getting latest run ID..."
         python <<EOF
@@ -75,29 +37,29 @@ jobs:
             sys.exit(1)
         EOF
 
-        - name: Download model artifacts
- 
-            env:
-              MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
-              MLFLOW_TRACKING_USERNAME: <prodivoz>
-              MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }} 
-            run: |
-              echo "📥 Downloading model artifact for run: ${{ env.RUN_ID }}" 
+    # === BAGIAN YANG DIPERBAIKI ADA DI BAWAH INI ===
+
+    - name: Download model artifacts
+      env:
+        MLFLOW_TRACKING_URI: https://dagshub.com/prodivoz/Workflow-CI.mlflow
+        MLFLOW_TRACKING_USERNAME: prodivoz
+        MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+      run: |
+        echo "📥 Downloading model artifact for run: ${{ env.RUN_ID }}" 
+        
+        pip install dagshub
+        
+        # Perintah download artefak Anda
+        mlflow artifacts download \
+          --run-id ${{ env.RUN_ID }} \
+          --artifact-path model \
+          -d ./downloaded_artifacts
               
-              
-              pip install dagshub
-              
-              # Perintah download artefak Anda
-              mlflow artifacts download \
-                --run-id ${{ env.RUN_ID }} \
-                --artifact-path model \
-                -d ./downloaded_artifacts
-                
-              echo "✅ Artifacts downloaded successfully."
-              
-              # Pindahkan file ke lokasi yang diinginkan
-              mkdir -p model
-              mv ./downloaded_artifacts/model/* ./model/
+        echo "✅ Artifacts downloaded successfully."
+        
+        # Pindahkan file ke lokasi yang diinginkan agar langkah selanjutnya berhasil
+        mkdir -p ${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model
+        mv ./downloaded_artifacts/model/* ${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model/
 
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
@@ -113,7 +75,8 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        MODEL_URI="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
+        # Menggunakan URI dari MLflow run secara langsung lebih andal
+        MODEL_URI="runs:/${{ env.RUN_ID }}/model"
         echo "🐳 Building Docker image from URI: $MODEL_URI"
 
         mlflow models build-docker \
