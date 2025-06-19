@@ -83,13 +83,15 @@ jobs:
         MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
       run: |
         echo "📥 Downloading model artifact for run: ${{ env.RUN_ID }}"
+        cd ${{ env.WORKING_DIRECTORY }}
+        mkdir -p model_artifacts/sklearn_model
         
         pip install dagshub
         
         mlflow artifacts download \
           --run-id ${{ env.RUN_ID }} \
-          --artifact-path model \
-          -d ./downloaded_artifacts
+          --artifact-path "model" \
+          --dst-path model_artifacts/sklearn_model
               
         echo "✅ Artifacts downloaded successfully."
         
