@@ -18,7 +18,6 @@ mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "./mlruns")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 mlflow.set_experiment("Model ML Eksperimen")
 
-
 # ========== PyFunc Wrapper ==========
 class SklearnWrapper(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
@@ -26,7 +25,6 @@ class SklearnWrapper(mlflow.pyfunc.PythonModel):
 
     def predict(self, context, model_input):
         return self.model.predict(model_input)
-
 
 # ========== Training Function ==========
 def train_and_log():
@@ -37,12 +35,10 @@ def train_and_log():
     X = df.drop(columns=['price', 'price_class'])
     y = df['price_class']
 
-    # Split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
 
-    # Preprocessing
     cat_cols = X_train.select_dtypes(include='object').columns
     num_cols = X_train.select_dtypes(exclude='object').columns
 
@@ -61,13 +57,11 @@ def train_and_log():
     X_train = pd.concat([X_train[num_cols], X_train_cat], axis=1)
     X_test = pd.concat([X_test[num_cols], X_test_cat], axis=1)
 
-    # Align columns
     missing_cols = set(X_train.columns) - set(X_test.columns)
     for col in missing_cols:
         X_test[col] = 0
     X_test = X_test[X_train.columns]
 
-    # ========== Train & Log to MLflow ==========
     with mlflow.start_run() as run:
         print("🚀 Starting training...")
         model = RandomForestClassifier(n_estimators=150, max_depth=10, random_state=42)
@@ -79,7 +73,6 @@ def train_and_log():
         f1_weighted = f1_score(y_test, y_pred, average="weighted")
         cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
 
-        # Log metadata
         mlflow.log_params(model.get_params())
         mlflow.log_metrics({
             "accuracy": acc,
@@ -87,7 +80,7 @@ def train_and_log():
             "f1_weighted": f1_weighted
         })
 
-        # Save confusion matrix
+        # === Save and log confusion matrix ===
         os.makedirs("figures", exist_ok=True)
         fig_path = "figures/confusion_matrix.png"
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['low', 'medium', 'high'])
@@ -96,11 +89,15 @@ def train_and_log():
         plt.savefig(fig_path)
         mlflow.log_artifact(fig_path)
 
-        # Save model
+        # === Save model to file ===
         model_path = "model.pkl"
         joblib.dump(model, model_path)
+        mlflow.log_artifact(model_path)  # <-- ensure it gets logged even outside pyfunc
 
-        print("📦 Logging model to MLflow...")
+        # === Log as pyfunc model ===
+        print("📁 Current directory content:")
+        os.system("ls -R .")
+
         mlflow.pyfunc.log_model(
             artifact_path="model",
             python_model=SklearnWrapper(),
@@ -112,7 +109,6 @@ def train_and_log():
         print("✅ Run ID:", run.info.run_id)
         print(f"✅ Accuracy: {acc:.2f}, F1_macro: {f1_macro:.2f}")
         print("📁 Model artifact URI:", mlflow.get_artifact_uri("model"))
-
 
 if __name__ == "__main__":
     train_and_log()
