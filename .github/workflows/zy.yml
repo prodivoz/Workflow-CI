@@ -50,53 +50,41 @@ jobs:
         experiment_name = "Model ML Eksperimen"
         client = mlflow.tracking.MlflowClient()
 
-        try:
-            experiment = client.get_experiment_by_name(experiment_name)
-            if experiment is None:
-                print(f"❌ Experiment '{experiment_name}' not found.")
-                sys.exit(1)
-
-            runs = client.search_runs(
-                experiment_ids=[experiment.experiment_id],
-                order_by=["start_time DESC"],
-                max_results=1
-            )
-            if not runs:
-                print("❌ No MLflow runs found in the experiment.")
-                sys.exit(1)
-
-            run_id = runs[0].info.run_id
-            print(f"✅ Latest run ID: {run_id}")
-
-            with open(os.environ["GITHUB_ENV"], "a") as f:
-                f.write(f"RUN_ID={run_id}\n")
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        experiment = client.get_experiment_by_name(experiment_name)
+        if experiment is None:
+            print("❌ Experiment not found.")
             sys.exit(1)
+
+        runs = client.search_runs(
+            experiment_ids=[experiment.experiment_id],
+            order_by=["start_time DESC"],
+            max_results=1
+        )
+        if not runs:
+            print("❌ No runs found.")
+            sys.exit(1)
+
+        run_id = runs[0].info.run_id
+        with open(os.environ["GITHUB_ENV"], "a") as f:
+            f.write(f"RUN_ID={run_id}\n")
+        print(f"✅ RUN_ID: {run_id}")
         EOF
 
-        - name: Download model artifacts manually from DagsHub
-        run: |
+    - name: Download model artifacts manually from DagsHub
+      run: |
         echo "📥 Start manual download from DagsHub"
-        
         RUN_ID=${{ env.RUN_ID }}
-        ARTIFACT_NAME="model"  # UBAH ke "best_model" kalau kamu pakai itu saat log_model
+        ARTIFACT_NAME="model"
         DEST_DIR="${{ env.WORKING_DIRECTORY }}/model_artifacts/sklearn_model"
-        
-        mkdir -p "$DEST_DIR"
 
+        mkdir -p "$DEST_DIR"
         echo "🕒 Waiting for DagsHub to publish artifact..."
-        sleep 20  # tunggu agar DagsHub sempat publish
+        sleep 20
 
         wget -r -np -nH --cut-dirs=5 \
           --reject "index.html*" \
           "https://dagshub.com/${{ env.MLFLOW_TRACKING_USERNAME }}/Workflow-CI.mlflow/artifacts/$ARTIFACT_NAME?run_id=$RUN_ID" \
           -P "$DEST_DIR"
-
-
-        
-       
 
     - name: Upload model to GitHub artifact
       uses: actions/upload-artifact@v4
@@ -114,10 +102,5 @@ jobs:
       run: |
         MODEL_URI="runs:/${{ env.RUN_ID }}/model"
         echo "🐳 Building Docker image from URI: $MODEL_URI"
-
-        mlflow models build-docker \
-          --model-uri "$MODEL_URI" \
-          --name "${{ env.DOCKER_IMAGE_NAME }}"
-
-        echo "📤 Pushing Docker image to Docker Hub: ${{ env.DOCKER_IMAGE_NAME }}:latest"
+        mlflow models build-docker --model-uri "$MODEL_URI" --name "${{ env.DOCKER_IMAGE_NAME }}"
         docker push "${{ env.DOCKER_IMAGE_NAME }}:latest"
