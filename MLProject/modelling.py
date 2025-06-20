@@ -81,12 +81,20 @@ with mlflow.start_run():
     mlflow.log_artifact(fig_path)
 
     
-    mlflow.sklearn.log_model(
-        sk_model=search.best_estimator_,
-        artifact_path="model",
-        signature=signature,
-        input_example=input_example
-    )
+from mlflow.models.signature import infer_signature
+
+# Infer signature dan input example
+signature = infer_signature(X_test, y_pred)
+input_example = X_test.iloc[:1]
+
+# Log model yang benar
+mlflow.sklearn.log_model(
+    sk_model=model,
+    artifact_path="model",
+    signature=signature,
+    input_example=input_example
+)
+
 
     print(f"Accuracy: {acc:.2f}")
     print(f"F1 Macro: {f1_macro:.2f}")
