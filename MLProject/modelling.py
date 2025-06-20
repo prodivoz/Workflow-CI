@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import mlflow
 import mlflow.sklearn
+from mlflow.models.signature import infer_signature
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
@@ -64,13 +65,13 @@ with mlflow.start_run():
     f1_weighted = f1_score(y_test, y_pred, average='weighted')
     cm = confusion_matrix(y_test, y_pred, labels=['low', 'medium', 'high'])
 
-    # Logging manual
+    # Logging manual ke MLflow
     mlflow.log_params(params)
     mlflow.log_metric("accuracy", acc)
     mlflow.log_metric("f1_macro", f1_macro)
     mlflow.log_metric("f1_weighted", f1_weighted)
 
-    # Save confusion matrix
+    # Save confusion matrix plot
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['low', 'medium', 'high'])
     disp.plot(cmap='Blues')
     plt.title("Confusion Matrix - Random Forest")
@@ -80,21 +81,16 @@ with mlflow.start_run():
     plt.savefig(fig_path)
     mlflow.log_artifact(fig_path)
 
-    
-from mlflow.models.signature import infer_signature
+    # Log model + signature
+    signature = infer_signature(X_test, y_pred)
+    input_example = X_test.iloc[:1]
 
-# Infer signature dan input example
-signature = infer_signature(X_test, y_pred)
-input_example = X_test.iloc[:1]
-
-# Log model yang benar
-mlflow.sklearn.log_model(
-    sk_model=model,
-    artifact_path="model",
-    signature=signature,
-    input_example=input_example
-)
-
+    mlflow.sklearn.log_model(
+        sk_model=model,
+        artifact_path="model",
+        signature=signature,
+        input_example=input_example
+    )
 
     print(f"Accuracy: {acc:.2f}")
     print(f"F1 Macro: {f1_macro:.2f}")
