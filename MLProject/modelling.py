@@ -80,8 +80,13 @@ with mlflow.start_run():
     plt.savefig(fig_path)
     mlflow.log_artifact(fig_path)
 
-    # Save model
-    mlflow.sklearn.log_model(model, "rf_classifier")
+    
+    mlflow.sklearn.log_model(
+        sk_model=search.best_estimator_,
+        artifact_path="model",
+        signature=signature,
+        input_example=input_example
+    )
 
     print(f"Accuracy: {acc:.2f}")
     print(f"F1 Macro: {f1_macro:.2f}")
